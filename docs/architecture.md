@@ -103,7 +103,7 @@ graph TD
     | `concept_id` | `UUID` | **PRIMARY KEY** | 业务概念的唯一ID。 |
     | `company_code` | `VARCHAR(10)` | **FOREIGN KEY** -\> companies.company\_code, INDEX | 关联到`companies`表。 |
     | `concept_name` | `VARCHAR(255)` | NOT NULL, INDEX | 业务概念的通用名称。 |
-    | `embedding` | `VECTOR(1024)` | **HNSW INDEX**, NOT NULL | 存储由Qwen Embedding模型生成的向量。 |
+    | `embedding` | `VECTOR(2560)` | **HNSW INDEX**, NOT NULL | 存储由Qwen Embedding模型生成的向量。 |
     | `concept_details` | `JSONB` | | 存储该概念的所有其他详细信息 (`description`, `category`, `metrics`等)。 |
     | `last_updated_from_doc_id` | `UUID` | FOREIGN KEY -\> source\_documents.doc\_id | 指向`source_documents`表，用于追溯最新信息来源。 |
     | `updated_at` | `TIMESTAMPTZ` | DEFAULT NOW() | 记录该概念的最后更新时间。 |

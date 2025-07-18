@@ -16,6 +16,9 @@ devLoadAlwaysFiles:
   - docs/architecture/2-技术栈-tech-stack.md
   - docs/architecture/4-源代码目录结构-source-tree.md
   - docs/architecture/9-编码标准与规范.md
+  - docs/architecture/8-测试策略-testing-strategy.md
+  - docs/architecture/7-错误处理与日志记录策略.md
+  - docs/dev-process-reflection-guide.md
 devDebugLog: .ai/debug-log.md
 devStoryLocation: docs/stories
 slashPrefix: BMad
