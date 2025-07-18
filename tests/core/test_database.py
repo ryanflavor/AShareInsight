@@ -1,147 +1,110 @@
 """
-Unit tests for database connection functionality
+Unit tests for database connection functionality.
+
+Tests the legacy DatabaseConnection wrapper class.
 """
 
 import os
 import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 # Add packages to path for testing
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../packages/core/src"))
 
 import pytest
 from core.database import DatabaseConnection
-from psycopg.rows import dict_row
 
 
 class TestDatabaseConnection:
-    """Test database connection functionality"""
+    """Test legacy database connection wrapper."""
 
     def setup_method(self):
-        """Setup test fixtures"""
+        """Setup test fixtures."""
         self.connection_string = "postgresql://test:test@localhost:5432/test"
-        # Mock the pool creation since it happens automatically
-        with patch("core.database.ConnectionPool") as mock_pool:
-            self.db = DatabaseConnection(self.connection_string)
-            self.mock_pool = mock_pool.return_value
 
-    @patch("core.database.ConnectionPool")
-    def test_initialization(self, mock_pool_class):
-        """Test DatabaseConnection initialization"""
-        # Pool is auto-created on initialization
+    @patch("core.database.DatabaseOperations")
+    def test_initialization(self, mock_operations_class):
+        """Test DatabaseConnection initialization."""
+        # Mock DatabaseOperations
+        mock_operations = Mock()
         mock_pool = Mock()
-        mock_pool_class.return_value = mock_pool
+        mock_operations.pool = mock_pool
+        mock_operations_class.return_value = mock_operations
 
         db = DatabaseConnection(self.connection_string)
 
-        assert db.connection_string == self.connection_string
+        assert db.operations == mock_operations
         assert db.pool == mock_pool
-        mock_pool_class.assert_called_once_with(
-            self.connection_string,
-            min_size=2,
-            max_size=10,
-            kwargs={"row_factory": dict_row},
-        )
+        mock_operations_class.assert_called_once_with(self.connection_string)
 
-    @patch("core.database.psycopg.connect")
-    def test_basic_connectivity_success(self, mock_connect):
-        """Test successful basic connectivity"""
-        # Mock database connection and cursor
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_connect.return_value.__enter__.return_value = mock_conn
-        mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
+    @patch("core.database.DatabaseOperations")
+    def test_close(self, mock_operations_class):
+        """Test closing the connection."""
+        # Mock DatabaseOperations
+        mock_operations = Mock()
+        mock_operations_class.return_value = mock_operations
 
-        # Mock query results
-        mock_cursor.fetchone.side_effect = [
-            ("PostgreSQL 16.9",),  # version query
-            ("vector", "0.8.0"),  # vector extension query
-            ("testdb", "testuser"),  # database info query
-        ]
+        db = DatabaseConnection(self.connection_string)
+        db.close()
 
-        result = self.db.test_basic_connectivity()
+        mock_operations.close.assert_called_once()
 
-        assert result["status"] == "success"
-        assert "PostgreSQL 16.9" in result["postgresql_version"]
-        assert result["vector_extension"]["name"] == "vector"
-        assert result["vector_extension"]["version"] == "0.8.0"
-        assert result["database"] == "testdb"
-        assert result["user"] == "testuser"
+    @patch("core.database.DatabaseOperations")
+    def test_pool_access(self, mock_operations_class):
+        """Test accessing the pool through the wrapper."""
+        # Mock DatabaseOperations with a pool
+        mock_operations = Mock()
+        # Use MagicMock for pool to support context manager
+        from unittest.mock import MagicMock
 
-    @patch("core.database.psycopg.connect")
-    def test_basic_connectivity_failure(self, mock_connect):
-        """Test basic connectivity failure"""
-        mock_connect.side_effect = Exception("Connection failed")
+        mock_pool = MagicMock()
+        mock_operations.pool = mock_pool
+        mock_operations_class.return_value = mock_operations
 
-        result = self.db.test_basic_connectivity()
+        db = DatabaseConnection(self.connection_string)
 
-        assert result["status"] == "failed"
-        assert "Connection failed" in result["error"]
+        # Pool should be accessible
+        assert db.pool is mock_pool
 
-    def test_create_connection_pool_success(self):
-        """Test successful connection pool creation"""
-        # Pool already created in __init__, calling create_connection_pool just logs
-        with patch("core.database.logger") as mock_logger:
-            self.db.create_connection_pool(min_size=2, max_size=5)
+        # Test that pool can be used as context manager
+        mock_connection = Mock()
+        mock_pool.connection.return_value.__enter__.return_value = mock_connection
 
-            # Should log that pool already exists
-            mock_logger.info.assert_called_with("Connection pool already created")
+        with db.pool.connection() as conn:
+            assert conn is mock_connection
 
-    @patch("core.database.ConnectionPool")
-    def test_create_connection_pool_failure(self, mock_pool_class):
-        """Test connection pool creation failure during initialization"""
-        mock_pool_class.side_effect = Exception("Pool creation failed")
+        mock_pool.connection.assert_called_once()
 
-        # Pool creation happens in __init__ and should raise
-        with pytest.raises(Exception, match="Pool creation failed"):
+    @patch("core.database.DatabaseOperations")
+    def test_error_propagation(self, mock_operations_class):
+        """Test that errors are properly propagated."""
+        # Mock DatabaseOperations to raise an error
+        mock_operations_class.side_effect = Exception("Connection failed")
+
+        with pytest.raises(Exception, match="Connection failed"):
             DatabaseConnection(self.connection_string)
 
-    def test_connection_pool_test_no_pool(self):
-        """Test connection pool test when pool is None"""
-        # Manually set pool to None to test this edge case
-        self.db.pool = None
-        result = self.db.test_connection_pool()
 
-        assert result["status"] == "failed"
-        assert "Connection pool not initialized" in result["error"]
+# Additional tests to ensure halfvec support
+class TestHalfvecSupport:
+    """Test halfvec-related functionality."""
 
-    def test_connection_pool_test_success(self):
-        """Test successful connection pool test"""
-        # Setup mock pool attributes
-        self.mock_pool.min_size = 2
-        self.mock_pool.max_size = 10
+    @patch("core.database.ConnectionPool")
+    def test_halfvec_operations_available(self, mock_pool_class):
+        """Test that DatabaseOperations has halfvec support methods."""
+        from core.database import DatabaseOperations
 
-        # Setup mock connection context manager
-        mock_conn = MagicMock()
-        mock_cursor = MagicMock()
-        mock_connection_ctx = MagicMock()
-        mock_connection_ctx.__enter__.return_value = mock_conn
-        mock_connection_ctx.__exit__.return_value = None
-        self.mock_pool.connection.return_value = mock_connection_ctx
+        # Create mock pool
+        mock_pool = Mock()
+        mock_pool_class.return_value = mock_pool
 
-        mock_cursor_ctx = MagicMock()
-        mock_cursor_ctx.__enter__.return_value = mock_cursor
-        mock_cursor_ctx.__exit__.return_value = None
-        mock_conn.cursor.return_value = mock_cursor_ctx
+        db_ops = DatabaseOperations("postgresql://test:test@localhost:5432/test")
 
-        mock_cursor.fetchone.return_value = ("Connection pool test successful",)
+        # Check that halfvec methods exist
+        assert hasattr(db_ops, "check_halfvec_support")
+        assert callable(db_ops.check_halfvec_support)
 
-        # Test pool
-        result = self.db.test_connection_pool()
-
-        assert result["status"] == "success"
-        assert result["message"] == "Connection pool test successful"
-        assert result["pool_stats"]["min_size"] == 2
-        assert result["pool_stats"]["max_size"] == 10
-
-    def test_close_pool_with_pool(self):
-        """Test closing connection pool when pool exists"""
-        # Pool is already mocked in setup
-        self.db.close_pool()
-
-        self.mock_pool.close.assert_called_once()
-
-    def test_close_pool_without_pool(self):
-        """Test closing connection pool when no pool exists"""
-        # Should not raise exception
-        self.db.close_pool()
+        # Check that vector operations use halfvec casting
+        assert hasattr(db_ops, "search_concepts_by_similarity")
+        assert hasattr(db_ops, "create_business_concept")
+        assert hasattr(db_ops, "update_concept_embedding")

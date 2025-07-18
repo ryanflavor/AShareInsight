@@ -1,5 +1,6 @@
--- AShareInsight Database Schema Initialization Script
+-- AShareInsight Database Schema Initialization Script with Halfvec Support
 -- This script creates the core database schema with pgvector extension support
+-- Updated to use halfvec type for 2560-dimensional vectors with HNSW indexing
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";  -- For UUID generation
@@ -47,11 +48,12 @@ CREATE INDEX idx_source_documents_doc_date ON source_documents(doc_date DESC);
 CREATE INDEX idx_source_documents_raw_llm_output ON source_documents USING GIN (raw_llm_output);  -- For JSONB queries
 
 -- Create business_concepts_master table (业务概念主数据表)
+-- Updated to use HALFVEC type for 2560-dimensional vectors
 CREATE TABLE business_concepts_master (
     concept_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),  -- 业务概念唯一ID
     company_code VARCHAR(10) NOT NULL,         -- 关联到companies表
     concept_name VARCHAR(255) NOT NULL,        -- 业务概念通用名称
-    embedding VECTOR(2560) NOT NULL,           -- 由Qwen Embedding模型生成的向量
+    embedding HALFVEC(2560) NOT NULL,          -- 由Qwen Embedding模型生成的向量 (halfvec支持HNSW索引)
     concept_details JSONB,                     -- 存储概念所有其他详细信息
     last_updated_from_doc_id UUID NOT NULL,    -- 指向source_documents表追溯最新信息来源
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),   -- 该概念最后更新时间
@@ -72,10 +74,12 @@ CREATE INDEX idx_business_concepts_company_code ON business_concepts_master(comp
 CREATE INDEX idx_business_concepts_name ON business_concepts_master(concept_name);
 CREATE INDEX idx_business_concepts_details ON business_concepts_master USING GIN (concept_details);  -- For JSONB queries
 
--- Note: HNSW index not created due to pgvector's 2000 dimension limit
--- The Qwen embedding model produces 2560-dimensional vectors
--- We'll use exact nearest neighbor search without index for now
--- Future optimization: implement dimensionality reduction or partitioning strategy
+-- Create HNSW index on halfvec column
+-- Now supports 2560 dimensions (halfvec supports up to 4000 dimensions for HNSW)
+CREATE INDEX idx_business_concepts_embedding_hnsw 
+ON business_concepts_master 
+USING hnsw (embedding halfvec_l2_ops)
+WITH (m = 32, ef_construction = 128);
 
 -- Create update trigger for updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -123,3 +127,12 @@ FROM pg_tables
 WHERE schemaname = 'public' 
 AND tablename IN ('companies', 'source_documents', 'business_concepts_master')
 ORDER BY tablename;
+
+-- Verify halfvec support
+SELECT 
+    'Halfvec Support' as feature,
+    CASE 
+        WHEN EXISTS (SELECT 1 FROM pg_type WHERE typname = 'halfvec') 
+        THEN 'Available - supports HNSW indexing up to 4000 dimensions'
+        ELSE 'Not available - pgvector version may need update'
+    END as status;

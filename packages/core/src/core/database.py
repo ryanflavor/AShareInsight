@@ -1,8 +1,9 @@
 """
-Database operations module for the AShareInsight project.
+Database operations module for the AShareInsight project with halfvec support.
 
 Provides database connectivity, CRUD operations, and vector search functionality
-using psycopg3 with PostgreSQL and pgvector extension.
+using psycopg3 with PostgreSQL and pgvector extension. Updated to use halfvec
+type for 2560-dimensional vectors with HNSW indexing support.
 """
 
 import json
@@ -10,7 +11,6 @@ from contextlib import contextmanager
 from typing import Any
 from uuid import UUID
 
-import psycopg
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
@@ -104,7 +104,7 @@ class DatabaseOperations:
         return Company(**result)
 
     def get_company_by_code(self, company_code: str) -> Company | None:
-        """Get company by company code."""
+        """Get company by stock code."""
         query = "SELECT * FROM companies WHERE company_code = %s"
 
         with self.pool.connection() as conn:
@@ -114,21 +114,31 @@ class DatabaseOperations:
 
         return Company(**result) if result else None
 
-    def update_company(self, company_code: str, updates: dict[str, Any]) -> Company:
+    def update_company(
+        self,
+        company_code: str,
+        company_name_short: str | None = None,
+        exchange: str | None = None,
+    ) -> Company | None:
         """Update company information."""
-        # Build dynamic update query
-        set_clauses = []
+        updates = []
         params = []
 
-        for key, value in updates.items():
-            set_clauses.append(f"{key} = %s")
-            params.append(value)
+        if company_name_short is not None:
+            updates.append("company_name_short = %s")
+            params.append(company_name_short)
+
+        if exchange is not None:
+            updates.append("exchange = %s")
+            params.append(exchange)
+
+        if not updates:
+            return self.get_company(company_code)
 
         params.append(company_code)
-
         query = f"""
             UPDATE companies
-            SET {", ".join(set_clauses)}
+            SET {", ".join(updates)}
             WHERE company_code = %s
             RETURNING *
         """
@@ -139,29 +149,27 @@ class DatabaseOperations:
                 result = cur.fetchone()
                 conn.commit()
 
-        return Company(**result)
+        return Company(**result) if result else None
 
-    def list_companies(self) -> list[Company]:
-        """List all companies."""
-        query = "SELECT * FROM companies ORDER BY company_code"
+    def list_companies(self, exchange: str | None = None) -> list[Company]:
+        """List all companies, optionally filtered by exchange."""
+        query = "SELECT * FROM companies"
+        params = ()
+
+        if exchange:
+            query += " WHERE exchange = %s"
+            params = (exchange,)
+
+        query += " ORDER BY company_code"
 
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query)
+                cur.execute(query, params)
                 results = cur.fetchall()
 
         return [Company(**row) for row in results]
 
-    def delete_company(self, company_code: str) -> None:
-        """Delete a company (cascades to related records)."""
-        query = "DELETE FROM companies WHERE company_code = %s"
-
-        with self.pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (company_code,))
-                conn.commit()
-
-    # Source Document operations
+    # Source document operations
     def create_source_document(self, document: SourceDocument) -> SourceDocument:
         """Create a new source document."""
         query = """
@@ -189,13 +197,14 @@ class DatabaseOperations:
                 result = cur.fetchone()
                 conn.commit()
 
-        # Parse JSON fields (UUID fields are already UUID objects with dict_row)
-        if isinstance(result["raw_llm_output"], str):
+        # Parse JSON field
+        if result["raw_llm_output"] and isinstance(result["raw_llm_output"], str):
             result["raw_llm_output"] = json.loads(result["raw_llm_output"])
+
         return SourceDocument(**result)
 
-    def get_document_by_id(self, doc_id: UUID) -> SourceDocument | None:
-        """Get document by ID."""
+    def get_source_document_by_id(self, doc_id: UUID) -> SourceDocument | None:
+        """Get source document by UUID."""
         query = "SELECT * FROM source_documents WHERE doc_id = %s"
 
         with self.pool.connection() as conn:
@@ -203,77 +212,49 @@ class DatabaseOperations:
                 cur.execute(query, (str(doc_id),))
                 result = cur.fetchone()
 
-        if result:
-            # UUID fields are already UUID objects with dict_row
-            if isinstance(result["raw_llm_output"], str):
-                result["raw_llm_output"] = json.loads(result["raw_llm_output"])
-            return SourceDocument(**result)
-        return None
+        if not result:
+            return None
 
-    def list_documents_by_company(self, company_code: str) -> list[SourceDocument]:
-        """List all documents for a company."""
-        query = """
-            SELECT * FROM source_documents
-            WHERE company_code = %s
-            ORDER BY doc_date DESC
-        """
+        # Parse JSON field
+        if result["raw_llm_output"] and isinstance(result["raw_llm_output"], str):
+            result["raw_llm_output"] = json.loads(result["raw_llm_output"])
 
-        with self.pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (company_code,))
-                results = cur.fetchall()
+        return SourceDocument(**result)
 
-        documents = []
-        for row in results:
-            # UUID fields are already UUID objects with dict_row
-            if isinstance(row["raw_llm_output"], str):
-                row["raw_llm_output"] = json.loads(row["raw_llm_output"])
-            documents.append(SourceDocument(**row))
-
-        return documents
-
-    def query_documents_by_jsonb(
-        self, json_filter: dict[str, Any]
+    def list_documents_by_company(
+        self, company_code: str, doc_type: str | None = None
     ) -> list[SourceDocument]:
-        """Query documents by JSONB content."""
-        # Build JSONB containment query
-        query = """
-            SELECT * FROM source_documents
-            WHERE raw_llm_output @> %s
-            ORDER BY created_at DESC
-        """
+        """List documents for a company, optionally filtered by type."""
+        query = "SELECT * FROM source_documents WHERE company_code = %s"
+        params = [company_code]
+
+        if doc_type:
+            query += " AND doc_type = %s"
+            params.append(doc_type)
+
+        query += " ORDER BY doc_date DESC"
 
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (json.dumps(json_filter),))
+                cur.execute(query, params)
                 results = cur.fetchall()
 
         documents = []
         for row in results:
-            # UUID fields are already UUID objects with dict_row
-            if isinstance(row["raw_llm_output"], str):
+            if row["raw_llm_output"] and isinstance(row["raw_llm_output"], str):
                 row["raw_llm_output"] = json.loads(row["raw_llm_output"])
             documents.append(SourceDocument(**row))
 
         return documents
 
-    def delete_document(self, doc_id: UUID) -> None:
-        """Delete a document."""
-        query = "DELETE FROM source_documents WHERE doc_id = %s"
-
-        with self.pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (str(doc_id),))
-                conn.commit()
-
-    # Business Concept operations
+    # Business concept operations
     def create_business_concept(self, concept: BusinessConcept) -> BusinessConcept:
         """Create a new business concept."""
         query = """
             INSERT INTO business_concepts_master
-            (concept_id, company_code, concept_name, embedding, concept_details,
-             last_updated_from_doc_id, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            (concept_id, company_code, concept_name, embedding,
+             concept_details, last_updated_from_doc_id, updated_at)
+            VALUES (%s, %s, %s, %s::halfvec(2560), %s, %s, %s)
             RETURNING *
         """
 
@@ -285,12 +266,10 @@ class DatabaseOperations:
                         str(concept.concept_id),
                         concept.company_code,
                         concept.concept_name,
-                        concept.embedding,  # psycopg3 handles list->vector conversion
-                        (
-                            json.dumps(concept.concept_details)
-                            if concept.concept_details
-                            else None
-                        ),
+                        concept.embedding,  # Will be cast to halfvec
+                        json.dumps(concept.concept_details)
+                        if concept.concept_details
+                        else None,
                         str(concept.last_updated_from_doc_id),
                         concept.updated_at,
                     ),
@@ -313,38 +292,85 @@ class DatabaseOperations:
 
         return BusinessConcept(**result)
 
-    def search_similar_concepts(
+    def get_business_concept_by_id(self, concept_id: UUID) -> BusinessConcept | None:
+        """Get business concept by UUID."""
+        query = "SELECT * FROM business_concepts_master WHERE concept_id = %s"
+
+        with self.pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(concept_id),))
+                result = cur.fetchone()
+
+        if not result:
+            return None
+
+        # Parse fields (UUID fields are already UUID objects with dict_row)
+        # Handle vector field - it might be a string or already parsed
+        if isinstance(result["embedding"], str):
+            # Parse the vector string format "[0.1, 0.2, ...]"
+            import ast
+
+            result["embedding"] = ast.literal_eval(result["embedding"])
+        else:
+            result["embedding"] = list(result["embedding"])  # Convert vector to list
+
+        if result["concept_details"] and isinstance(result["concept_details"], str):
+            result["concept_details"] = json.loads(result["concept_details"])
+
+        return BusinessConcept(**result)
+
+    def search_concepts_by_similarity(
         self,
         query_embedding: list[float],
         company_code: str | None = None,
         limit: int = 10,
+        distance_threshold: float | None = None,
     ) -> list[dict[str, Any]]:
-        """Search for similar concepts using vector similarity."""
+        """
+        Search for similar business concepts using HNSW index on halfvec column.
+
+        Now supports efficient search on 2560-dimensional vectors using the
+        HNSW index created on the halfvec column.
+
+        Args:
+            query_embedding: 2560-dimensional query vector
+            company_code: Optional filter by company code
+            limit: Maximum number of results to return
+            distance_threshold: Optional maximum distance threshold
+
+        Returns:
+            List of similar concepts with their distances
+        """
+        # Build base query with halfvec distance operator
         base_query = """
             SELECT
                 concept_id,
                 company_code,
                 concept_name,
                 concept_details,
-                embedding <=> %s::vector AS distance
+                embedding <-> %s::halfvec(2560) AS distance
             FROM business_concepts_master
+            WHERE 1=1
         """
 
-        if company_code:
-            base_query += " WHERE company_code = %s"
+        params = [query_embedding]
 
-        base_query += " ORDER BY embedding <=> %s::vector LIMIT %s"
+        # Add optional filters
+        if company_code:
+            base_query += " AND company_code = %s"
+            params.append(company_code)
+
+        if distance_threshold is not None:
+            base_query += " AND embedding <-> %s::halfvec(2560) <= %s"
+            params.extend([query_embedding, distance_threshold])
+
+        # HNSW index will automatically be used for ORDER BY distance
+        base_query += " ORDER BY embedding <-> %s::halfvec(2560) LIMIT %s"
+        params.extend([query_embedding, limit])
 
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
-                if company_code:
-                    cur.execute(
-                        base_query,
-                        (query_embedding, company_code, query_embedding, limit),
-                    )
-                else:
-                    cur.execute(base_query, (query_embedding, query_embedding, limit))
-
+                cur.execute(base_query, params)
                 results = cur.fetchall()
 
         # Format results
@@ -363,10 +389,10 @@ class DatabaseOperations:
         new_embedding: list[float],
         last_updated_from_doc_id: UUID,
     ) -> BusinessConcept:
-        """Update concept embedding."""
+        """Update concept embedding with halfvec type."""
         query = """
             UPDATE business_concepts_master
-            SET embedding = %s,
+            SET embedding = %s::halfvec(2560),
                 last_updated_from_doc_id = %s
             WHERE concept_id = %s
             RETURNING *
@@ -411,89 +437,72 @@ class DatabaseOperations:
 
         concepts = []
         for row in results:
-            # UUID fields are already UUID objects with dict_row
-            # Handle vector field - it might be a string or already parsed
+            # Handle vector field
             if isinstance(row["embedding"], str):
-                # Parse the vector string format "[0.1, 0.2, ...]"
                 import ast
 
                 row["embedding"] = ast.literal_eval(row["embedding"])
             else:
-                row["embedding"] = list(row["embedding"])  # Convert vector to list
+                row["embedding"] = list(row["embedding"])
 
             if row["concept_details"] and isinstance(row["concept_details"], str):
                 row["concept_details"] = json.loads(row["concept_details"])
+
             concepts.append(BusinessConcept(**row))
 
         return concepts
 
+    def check_halfvec_support(self) -> dict[str, Any]:
+        """
+        Check if halfvec type is supported and HNSW index is available.
+
+        Returns:
+            Dictionary with support status and version information
+        """
+        with self.pool.connection() as conn:
+            with conn.cursor() as cur:
+                # Check pgvector version
+                cur.execute(
+                    "SELECT extversion FROM pg_extension WHERE extname = 'vector'"
+                )
+                version_result = cur.fetchone()
+
+                # Check if halfvec type exists
+                cur.execute(
+                    "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'halfvec')"
+                )
+                halfvec_result = cur.fetchone()
+
+                # Check if HNSW index exists on our table
+                cur.execute("""
+                    SELECT indexname, indexdef 
+                    FROM pg_indexes 
+                    WHERE tablename = 'business_concepts_master' 
+                    AND indexdef LIKE '%hnsw%'
+                """)
+                index_result = cur.fetchone()
+
+        return {
+            "pgvector_version": version_result["extversion"]
+            if version_result
+            else None,
+            "halfvec_supported": halfvec_result["exists"] if halfvec_result else False,
+            "hnsw_index": index_result if index_result else None,
+            "max_dimensions": 4000
+            if halfvec_result and halfvec_result["exists"]
+            else 2000,
+        }
+
 
 # Legacy DatabaseConnection class for backward compatibility
-class DatabaseConnection(DatabaseOperations):
+class DatabaseConnection:
     """Legacy database connection class for backward compatibility."""
 
-    def create_connection_pool(self, min_size: int = 2, max_size: int = 10) -> None:
-        """Create connection pool (for backward compatibility)."""
-        # Already created in __init__, just log
-        logger.info("Connection pool already created")
+    def __init__(self, connection_string: str):
+        """Initialize with automatic connection pool creation."""
+        self.operations = DatabaseOperations(connection_string)
+        self.pool = self.operations.pool
 
-    def test_basic_connectivity(self) -> dict[str, Any]:
-        """Test basic database connectivity."""
-        try:
-            with psycopg.connect(self.connection_string) as conn:
-                with conn.cursor() as cur:
-                    # Test basic query
-                    cur.execute("SELECT version();")
-                    version = cur.fetchone()[0]
-
-                    # Test pgvector extension
-                    cur.execute(
-                        "SELECT extname, extversion FROM pg_extension "
-                        "WHERE extname = 'vector';"
-                    )
-                    vector_ext = cur.fetchone()
-
-                    # Test database info
-                    cur.execute("SELECT current_database(), current_user;")
-                    db_info = cur.fetchone()
-
-                    return {
-                        "status": "success",
-                        "postgresql_version": version,
-                        "vector_extension": {
-                            "name": vector_ext[0] if vector_ext else None,
-                            "version": vector_ext[1] if vector_ext else None,
-                        },
-                        "database": db_info[0],
-                        "user": db_info[1],
-                    }
-        except Exception as e:
-            logger.error(f"Connectivity test failed: {e}")
-            return {"status": "failed", "error": str(e)}
-
-    def test_connection_pool(self) -> dict[str, Any]:
-        """Test connection pooling functionality."""
-        if not self.pool:
-            return {"status": "failed", "error": "Connection pool not initialized"}
-
-        try:
-            with self.pool.connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT 'Connection pool test successful' as result;")
-                    result = cur.fetchone()[0]
-
-                    return {
-                        "status": "success",
-                        "message": result,
-                        "pool_stats": {
-                            "min_size": self.pool.min_size,
-                            "max_size": self.pool.max_size,
-                        },
-                    }
-        except Exception as e:
-            logger.error(f"Connection pool test failed: {e}")
-            return {"status": "failed", "error": str(e)}
-
-    def close_pool(self) -> None:
-        """Close connection pool (for backward compatibility)."""
-        self.close()
+    def close(self):
+        """Close the connection pool."""
+        self.operations.close()

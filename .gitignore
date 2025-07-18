@@ -102,3 +102,27 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Docker volumes (local development)
+postgres_data/
+pgadmin_data/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# Project specific
+compatibility_validation_report.*
+ashareinsight.egg-info/
+
+# uv
+uv.lock
+
+# BMad core (if you want to ignore it)
+.bmad-core/
+
+# Keep .env.example
+!.env.example

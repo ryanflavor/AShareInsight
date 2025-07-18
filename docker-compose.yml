@@ -20,7 +20,9 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - ashareinsight-network
+      ashareinsight-network:
+        aliases:
+          - postgres
 
   adminer:
     image: adminer:latest
