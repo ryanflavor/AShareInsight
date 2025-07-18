@@ -19,6 +19,32 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - ashareinsight-network
+
+  adminer:
+    image: adminer:latest
+    container_name: ashareinsight-adminer
+    ports:
+      - "8123:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      # 确保容器间通信不走代理
+      NO_PROXY: postgres,localhost,127.0.0.1,ashareinsight-postgres
+      no_proxy: postgres,localhost,127.0.0.1,ashareinsight-postgres
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - ashareinsight-network
+
+networks:
+  ashareinsight-network:
+    driver: bridge
 
 volumes:
   postgres_data:
