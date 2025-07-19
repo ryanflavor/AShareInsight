@@ -1,0 +1,225 @@
+#!/usr/bin/env python
+"""
+Database initialization script for AShareInsight.
+Runs database migrations and verifies the schema.
+"""
+
+import sys
+from pathlib import Path
+
+import psycopg
+from psycopg.rows import dict_row
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings
+
+
+class DatabaseSettings(BaseSettings):
+    """Database configuration settings."""
+
+    postgres_user: str = "ashareinsight"
+    postgres_password: SecretStr = SecretStr("ashareinsight_password")
+    postgres_db: str = "ashareinsight_db"
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore extra fields in .env
+
+    @property
+    def database_url(self) -> str:
+        """Construct PostgreSQL connection URL."""
+        return (
+            f"postgresql://{self.postgres_user}:"
+            f"{self.postgres_password.get_secret_value()}@"
+            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+
+class MigrationRunner:
+    """Handles database migration execution."""
+
+    def __init__(self, settings: DatabaseSettings):
+        self.settings = settings
+        self.migration_dir = Path(__file__).parent
+
+    def get_connection(self) -> psycopg.Connection:
+        """Create database connection."""
+        return psycopg.connect(self.settings.database_url, row_factory=dict_row)
+
+    def check_database_exists(self) -> bool:
+        """Check if the database exists and is accessible."""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    return True
+        except psycopg.OperationalError as e:
+            print(f"Database connection error: {e}")
+            return False
+
+    def check_pgvector_extension(self) -> bool:
+        """Check if pgvector extension is available."""
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM pg_available_extensions WHERE name = 'vector'"
+                )
+                return cur.fetchone() is not None
+
+    def get_current_version(self) -> str | None:
+        """Get current schema version from database."""
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT version_number FROM schema_versions "
+                        "ORDER BY applied_at DESC LIMIT 1"
+                    )
+                    result = cur.fetchone()
+                    return result["version_number"] if result else None
+        except psycopg.errors.UndefinedTable:
+            return None
+
+    def run_migration(self, migration_file: Path) -> None:
+        """Execute a single migration file."""
+        print(f"Running migration: {migration_file.name}")
+
+        with open(migration_file) as f:
+            sql_content = f.read()
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql_content)
+            conn.commit()
+
+        print(f"✓ Migration {migration_file.name} completed successfully")
+
+    def verify_schema(self) -> None:
+        """Verify that all required tables exist."""
+        required_tables = [
+            "companies",
+            "source_documents",
+            "business_concepts_master",
+            "schema_versions",
+        ]
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT tablename 
+                    FROM pg_tables 
+                    WHERE schemaname = 'public' 
+                    AND tablename = ANY(%s)
+                    """,
+                    (required_tables,),
+                )
+                existing_tables = {row["tablename"] for row in cur.fetchall()}
+
+        missing_tables = set(required_tables) - existing_tables
+        if missing_tables:
+            raise RuntimeError(f"Missing tables: {', '.join(missing_tables)}")
+
+        print("✓ All required tables exist")
+
+    def verify_indexes(self) -> None:
+        """Verify that all required indexes exist."""
+        expected_indexes = [
+            "idx_company_name_short",
+            "idx_source_docs_company_date",
+            "idx_concepts_embedding",
+            "idx_unique_active_concept",
+        ]
+
+        with self.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT indexname 
+                    FROM pg_indexes 
+                    WHERE schemaname = 'public'
+                    AND indexname = ANY(%s)
+                    """,
+                    (expected_indexes,),
+                )
+                existing_indexes = {row["indexname"] for row in cur.fetchall()}
+
+        missing_indexes = set(expected_indexes) - existing_indexes
+        if missing_indexes:
+            print(f"⚠ Warning: Missing indexes: {', '.join(missing_indexes)}")
+        else:
+            print("✓ All required indexes exist")
+
+    def run_all_migrations(self) -> None:
+        """Run all pending migrations."""
+        # Check database connectivity
+        if not self.check_database_exists():
+            print("❌ Cannot connect to database. Please ensure PostgreSQL is running.")
+            sys.exit(1)
+
+        # Check pgvector extension
+        if not self.check_pgvector_extension():
+            print(
+                "❌ pgvector extension is not available. Please use pgvector Docker image."
+            )
+            sys.exit(1)
+
+        print("✓ Database connection established")
+        print("✓ pgvector extension available")
+
+        # Get current version
+        current_version = self.get_current_version()
+        if current_version:
+            print(f"Current schema version: {current_version}")
+        else:
+            print("No schema version found. Running initial migration...")
+
+        # Find migration files
+        migration_files = sorted(self.migration_dir.glob("*.sql"))
+
+        if not migration_files:
+            print("No migration files found")
+            return
+
+        # Run migrations
+        for migration_file in migration_files:
+            # Skip if this migration has already been applied
+            # (In a real system, we'd track individual migrations)
+            if current_version and current_version >= "1.0.0":
+                print(f"Skipping {migration_file.name} - already applied")
+                continue
+
+            self.run_migration(migration_file)
+
+        # Verify schema
+        print("\nVerifying database schema...")
+        self.verify_schema()
+        self.verify_indexes()
+
+        # Show final version
+        final_version = self.get_current_version()
+        print(f"\n✅ Database initialization complete! Schema version: {final_version}")
+
+
+def main():
+    """Main entry point."""
+    print("AShareInsight Database Initialization")
+    print("=" * 40)
+
+    # Load settings
+    settings = DatabaseSettings()
+
+    # Run migrations
+    runner = MigrationRunner(settings)
+
+    try:
+        runner.run_all_migrations()
+    except Exception as e:
+        print(f"\n❌ Error during migration: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

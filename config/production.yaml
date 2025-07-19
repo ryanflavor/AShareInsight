@@ -1,0 +1,139 @@
+# AShareInsight Production Configuration
+# This file contains settings for the production environment
+
+app:
+  name: AShareInsight
+  version: 0.1.0
+  environment: production
+  debug: false
+
+database:
+  host: ${POSTGRES_HOST}
+  port: ${POSTGRES_PORT:5432}
+  name: ${POSTGRES_DB}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+  pool:
+    min_size: 10
+    max_size: 50
+    timeout: 30
+  ssl:
+    enabled: true
+    verify: true
+  
+redis:
+  host: ${REDIS_HOST}
+  port: ${REDIS_PORT:6379}
+  db: ${REDIS_DB:0}
+  password: ${REDIS_PASSWORD}
+  decode_responses: true
+  
+api:
+  host: ${API_HOST:0.0.0.0}
+  port: ${API_PORT:8000}
+  workers: ${API_WORKERS:4}
+  reload: false
+  cors:
+    enabled: true
+    origins: ${CORS_ORIGINS}
+    allow_credentials: true
+    allow_methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+    allow_headers:
+      - Content-Type
+      - Authorization
+
+models:
+  gemini:
+    api_key: ${GEMINI_API_KEY}
+    model: gemini-2.5-pro
+    temperature: 0.1
+    max_tokens: 4096
+    timeout: 60
+    
+  embedding:
+    service_url: ${QWEN_EMBEDDING_URL}
+    model: Qwen3-Embedding-4B
+    dimension: 2560
+    batch_size: 64
+    timeout: 30
+    
+  reranker:
+    service_url: ${QWEN_RERANKER_URL}
+    model: Qwen-Reranker
+    top_k: 10
+    timeout: 30
+
+vector_store:
+  similarity_threshold: 0.75
+  max_results: 50
+  index:
+    m: 32
+    ef_construction: 128
+    ef_search: 64
+
+logging:
+  level: ${LOG_LEVEL:WARNING}
+  format: ${LOG_FORMAT:json}
+  handlers:
+    console:
+      enabled: false
+      level: ERROR
+    file:
+      enabled: true
+      level: INFO
+      path: ${LOG_PATH:/var/log/ashareinsight/app.log}
+      rotation:
+        max_bytes: 52428800  # 50MB
+        backup_count: 10
+    syslog:
+      enabled: true
+      address: ${SYSLOG_ADDRESS}
+      facility: local0
+
+monitoring:
+  telemetry:
+    enabled: ${ENABLE_TELEMETRY:true}
+    endpoint: ${OTLP_ENDPOINT}
+    service_name: ashareinsight-api
+    sample_rate: 0.1
+    
+  metrics:
+    enabled: true
+    port: 9090
+    path: /metrics
+    
+  healthcheck:
+    enabled: true
+    path: /health
+    interval: 60
+
+processing:
+  batch_size: 500
+  max_workers: 8
+  timeout: 600
+  retry:
+    max_attempts: 5
+    backoff_factor: 2
+    max_backoff: 300
+    
+paths:
+  documents: ${DOCUMENTS_PATH:/data/documents}
+  outputs: ${OUTPUTS_PATH:/data/outputs}
+  dead_letter: ${DEAD_LETTER_PATH:/data/dead_letter_queue}
+  temp: ${TEMP_PATH:/tmp/ashareinsight}
+
+security:
+  api_key_header: X-API-Key
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 60
+    burst: 100
+  
+performance:
+  cache_ttl: 3600
+  connection_timeout: 30
+  read_timeout: 60
