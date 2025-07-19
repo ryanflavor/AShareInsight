@@ -126,3 +126,5 @@ uv.lock
 
 # Keep .env.example
 !.env.example
+
+reserved/

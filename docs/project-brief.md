@@ -56,7 +56,7 @@
 * **核心框架**: LangChain
 * **数据库**: PostgreSQL (配合 pgvector 插件)
 * **Embedding与Rerank模型**: 本地部署的Qwen3系列模型。
-* **LLM**: DeepSeek API
+* **LLM**: gemini 2.5 pro
 * **硬件**: 针对您的2x4090 GPU配置进行批处理和模型加载优化。
 
 #### **8. 风险与开放性问题**
