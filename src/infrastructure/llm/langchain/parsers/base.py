@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, ValidationError
@@ -62,7 +62,7 @@ class MarkdownExtractor:
         )
 
 
-class BaseOutputParser(ABC, Generic[T]):
+class BaseOutputParser[T: BaseModel](ABC):
     """Base class for parsing LLM outputs with Pydantic validation."""
 
     def __init__(self, pydantic_model: type[T]):

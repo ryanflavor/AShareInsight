@@ -1,18 +1,30 @@
 """OpenTelemetry monitoring and observability module."""
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from functools import wraps
 from typing import Any, TypeVar
 
 from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace import Status, StatusCode
+
+try:
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
+    HAS_OTLP_EXPORTER = True
+except ImportError:
+    HAS_OTLP_EXPORTER = False
+
+try:
+    from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
+    HAS_LOGGING_INSTRUMENTOR = True
+except ImportError:
+    HAS_LOGGING_INSTRUMENTOR = False
 
 from src.shared.config.settings import Settings
 
@@ -32,8 +44,8 @@ def setup_telemetry(settings: Settings) -> None:
     # Create resource with service information
     resource = Resource.create(
         {
-            "service.name": settings.otel_service_name,
-            "service.version": "1.0.0",
+            "service.name": settings.monitoring.otel_service_name,
+            "service.version": settings.app_version,
             "deployment.environment": settings.environment,
         }
     )
@@ -42,16 +54,17 @@ def setup_telemetry(settings: Settings) -> None:
     provider = TracerProvider(resource=resource)
 
     # Add exporters based on configuration
-    if settings.otel_exporter_otlp_endpoint:
+    if settings.monitoring.otel_exporter_otlp_endpoint and HAS_OTLP_EXPORTER:
         # OTLP exporter for production
         otlp_exporter = OTLPSpanExporter(
-            endpoint=settings.otel_exporter_otlp_endpoint,
-            insecure=True,  # Set to False in production with proper TLS
+            endpoint=settings.monitoring.otel_exporter_otlp_endpoint,
+            # insecure should only be True for local development
+            insecure=settings.environment == "local",
         )
         provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
         logger.info(
             "OpenTelemetry OTLP exporter configured",
-            endpoint=settings.otel_exporter_otlp_endpoint,
+            extra={"endpoint": settings.monitoring.otel_exporter_otlp_endpoint},
         )
     else:
         # Console exporter for development
@@ -66,7 +79,8 @@ def setup_telemetry(settings: Settings) -> None:
     _tracer = trace.get_tracer(__name__)
 
     # Instrument logging to inject trace context
-    LoggingInstrumentor().instrument()
+    if HAS_LOGGING_INSTRUMENTOR:
+        LoggingInstrumentor().instrument()
 
     logger.info("OpenTelemetry initialized successfully")
 
@@ -84,7 +98,7 @@ def trace_span(
     name: str,
     attributes: dict[str, Any] | None = None,
     kind: trace.SpanKind = trace.SpanKind.INTERNAL,
-):
+) -> Generator[trace.Span]:
     """Context manager for creating a traced span."""
     tracer = get_tracer()
     with tracer.start_as_current_span(
@@ -112,7 +126,7 @@ def trace_method(
 
     def decorator(func: F) -> F:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             span_name = name or f"{func.__module__}.{func.__name__}"
             span_attributes = attributes or {}
 

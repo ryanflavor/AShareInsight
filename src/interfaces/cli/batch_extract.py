@@ -85,12 +85,18 @@ def format_batch_results(results: dict) -> Table:
     type=int,
     help="Maximum number of files to process",
 )
+@click.option(
+    "--skip-archive",
+    is_flag=True,
+    help="Skip archiving extraction results to database",
+)
 def batch_extract(
     directory: Path,
     document_type: str,
     pattern: str,
     no_resume: bool,
     max_files: int | None,
+    skip_archive: bool,
 ) -> None:
     """Batch extract structured data from multiple financial documents.
 
@@ -98,7 +104,8 @@ def batch_extract(
     LLM calls with rate limiting and progress tracking.
 
     Example:
-        $ python -m src.interfaces.cli.batch_extract ./reports --document-type annual_report --pattern "*.txt"
+        $ python -m src.interfaces.cli.batch_extract ./reports \\
+            --document-type annual_report --pattern "*.txt"
     """
     try:
         # Find all matching files
@@ -120,7 +127,7 @@ def batch_extract(
         settings = Settings()
 
         # Validate settings
-        if not settings.llm.gemini_api_key:
+        if not settings.llm.gemini_api_key.get_secret_value():
             console.print(
                 "[red]Error: GEMINI_API_KEY environment variable not set[/red]"
             )
@@ -136,16 +143,30 @@ def batch_extract(
         )
         console.print(f"  Resume enabled: {not no_resume}\n")
 
-        # Initialize batch processor
+        # Initialize batch processor with optional archive repository
         llm_service = GeminiLLMAdapter(settings)
-        batch_processor = BatchExtractDocumentsUseCase(llm_service, settings)
 
         # Process files
-        results = batch_processor.execute(
-            file_paths=file_paths,
-            document_type=document_type,
-            resume=not no_resume,
-        )
+        import asyncio
+
+        async def run_batch_extraction():
+            """Run batch extraction with proper async initialization."""
+            # Pass None for archive_repository - the batch processor will handle
+            # creating archive use cases with proper session management
+            batch_processor = BatchExtractDocumentsUseCase(
+                llm_service,
+                settings,
+                archive_repository=None,  # Will be handled per-file
+                skip_archive=skip_archive,
+            )
+
+            return await batch_processor.execute(
+                file_paths=file_paths,
+                document_type=document_type,
+                resume=not no_resume,
+            )
+
+        results = asyncio.run(run_batch_extraction())
 
         # Display results
         console.print("\n")

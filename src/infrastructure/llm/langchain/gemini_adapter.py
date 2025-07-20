@@ -6,7 +6,7 @@ from typing import Any
 
 import structlog
 from langchain_core.messages import BaseMessage
-from langchain_core.outputs import ChatResult
+from langchain_core.outputs import ChatGeneration, ChatResult
 from openai import APITimeoutError, RateLimitError
 from tenacity import (
     retry,
@@ -72,9 +72,11 @@ class GeminiAdapter(LangChainBase):
                     # Convert messages to OpenAI format
                     messages_dict = [
                         {
-                            "role": "system"
-                            if m.__class__.__name__ == "SystemMessage"
-                            else "user",
+                            "role": (
+                                "system"
+                                if m.__class__.__name__ == "SystemMessage"
+                                else "user"
+                            ),
                             "content": m.content,
                         }
                         for m in messages
@@ -110,8 +112,20 @@ class GeminiAdapter(LangChainBase):
                     response_json = response.json()
                     content = response_json["choices"][0]["message"]["content"]
 
-                    # Return as AIMessage for compatibility
-                    result = AIMessage(content=content)
+                    # Extract token usage if available
+                    usage = response_json.get("usage", {})
+
+                    # Return as AIMessage with usage metadata
+                    result = AIMessage(
+                        content=content,
+                        additional_kwargs={
+                            "usage": {
+                                "prompt_tokens": usage.get("prompt_tokens", 0),
+                                "completion_tokens": usage.get("completion_tokens", 0),
+                                "total_tokens": usage.get("total_tokens", 0),
+                            }
+                        },
+                    )
                     client.close()
                 else:
                     raise
@@ -123,6 +137,10 @@ class GeminiAdapter(LangChainBase):
                 model=self.config.model_name, elapsed_time=elapsed_time, success=True
             )
 
+            # Convert BaseMessage to ChatResult
+            if isinstance(result, BaseMessage):
+                generation = ChatGeneration(message=result)
+                return ChatResult(generations=[generation])
             return result
 
         except (APITimeoutError, RateLimitError):
@@ -159,9 +177,39 @@ class GeminiAdapter(LangChainBase):
         Raises:
             LLMServiceError: If the request fails after all retries.
         """
-        # For now, wrap the sync method - can be optimized later
+        # Native async implementation would require async LLM client
+        # For now, wrap the sync method
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.invoke, messages, kwargs)
+        # Use lambda to properly handle kwargs
+        return await loop.run_in_executor(None, lambda: self.invoke(messages, **kwargs))
+
+    def stream(self, messages: list[BaseMessage], **kwargs: Any):
+        """Stream responses from Gemini model.
+
+        Args:
+            messages: List of messages to send to the model.
+            **kwargs: Additional arguments passed to the model.
+
+        Yields:
+            Chunks of the response as they become available.
+
+        Raises:
+            LLMServiceError: If the request fails.
+        """
+        try:
+            # Merge kwargs with default config
+            stream_kwargs = {
+                "max_tokens": self.config.max_tokens,
+                "temperature": self.config.temperature,
+                "stream": True,
+                **kwargs,
+            }
+
+            yield from self.llm.stream(messages, **stream_kwargs)
+
+        except Exception as e:
+            logger.error("Failed to stream from Gemini model", error=str(e))
+            raise LLMServiceError(f"Failed to stream from Gemini model: {str(e)}")
 
     def _log_invocation_metadata(
         self, model: str, elapsed_time: float, success: bool, error: str | None = None

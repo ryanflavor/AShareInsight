@@ -1,8 +1,8 @@
 """Base LangChain integration module for LLM services."""
 
 import httpx
-from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI  # Using OpenAI format for Gemini-compatible API
+from pydantic import BaseModel, Field, SecretStr
 
 from src.shared.config.settings import get_settings
 
@@ -11,7 +11,9 @@ class LangChainConfig(BaseModel):
     """Configuration for LangChain LLM services."""
 
     base_url: str = Field(default_factory=lambda: get_settings().llm.gemini_base_url)
-    api_key: str = Field(default_factory=lambda: get_settings().llm.gemini_api_key)
+    api_key: str = Field(
+        default_factory=lambda: get_settings().llm.gemini_api_key.get_secret_value()
+    )
     model_name: str = Field(
         default_factory=lambda: get_settings().llm.gemini_model_name
     )
@@ -39,6 +41,13 @@ class LangChainBase:
         """
         self.config = config or LangChainConfig()
         self._validate_config()
+        self._http_client: httpx.Client | None = None
+        self._llm: ChatOpenAI | None = None
+
+    def __del__(self):
+        """Cleanup HTTP client on deletion."""
+        if hasattr(self, "_http_client") and self._http_client:
+            self._http_client.close()
 
     def _validate_config(self) -> None:
         """Validate configuration values."""
@@ -57,28 +66,31 @@ class LangChainBase:
         Returns:
             Configured ChatOpenAI instance with Gemini settings and connection pool.
         """
-        # Configure HTTP client with connection pooling
-        http_client = httpx.Client(
-            limits=httpx.Limits(
-                max_keepalive_connections=get_settings().llm.connection_pool_size,
-                max_connections=get_settings().llm.connection_pool_size * 2,
-                keepalive_expiry=30.0,  # Keep connections alive for 30 seconds
-            ),
-            timeout=httpx.Timeout(
-                timeout=float(self.config.timeout),
-                connect=10.0,  # Connection timeout
-                read=float(self.config.timeout),  # Read timeout
-                write=10.0,  # Write timeout
-            ),
-        )
+        if self._llm is None:
+            # Configure HTTP client with connection pooling (only once)
+            if self._http_client is None:
+                self._http_client = httpx.Client(
+                    limits=httpx.Limits(
+                        max_keepalive_connections=get_settings().llm.connection_pool_size,
+                        max_connections=get_settings().llm.connection_pool_size * 2,
+                        keepalive_expiry=30.0,  # Keep connections alive for 30 seconds
+                    ),
+                    timeout=httpx.Timeout(
+                        timeout=float(self.config.timeout),
+                        connect=10.0,  # Connection timeout
+                        read=float(self.config.timeout),  # Read timeout
+                        write=10.0,  # Write timeout
+                    ),
+                )
 
-        return ChatOpenAI(
-            base_url=f"{self.config.base_url}/v1",
-            api_key=self.config.api_key,
-            model=self.config.model_name,
-            max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature,
-            timeout=self.config.timeout,
-            max_retries=self.config.max_retries,
-            http_client=http_client,
-        )
+            self._llm = ChatOpenAI(
+                base_url=f"{self.config.base_url}/v1",
+                api_key=SecretStr(self.config.api_key),
+                model=self.config.model_name,
+                temperature=self.config.temperature,
+                timeout=self.config.timeout,
+                max_retries=self.config.max_retries,
+                http_client=self._http_client,
+            )
+
+        return self._llm

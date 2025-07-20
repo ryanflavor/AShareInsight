@@ -18,10 +18,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 from rich.table import Table
 
-from src.application.use_cases.extract_document_sync import ExtractDocumentDataUseCase
-from src.domain.entities.company import AnnualReportExtraction
-from src.domain.entities.extraction import DocumentExtractionResult
-from src.domain.entities.research_report import ResearchReportExtraction
+from src.application.use_cases.extract_document_data import ExtractDocumentDataUseCase
 from src.infrastructure.document_processing.loader import DocumentLoader
 from src.infrastructure.llm import GeminiLLMAdapter
 from src.shared.config.settings import Settings
@@ -64,52 +61,63 @@ def setup_logging(debug: bool) -> None:
     )
 
 
-def format_extraction_result(result: DocumentExtractionResult) -> Table:
+def format_extraction_result(result) -> Table:
     """Format extraction result as a rich table."""
     table = Table(title="Extraction Result", show_header=True, header_style="bold cyan")
     table.add_column("Field", style="green", width=30)
     table.add_column("Value", style="white")
 
     # Basic info
-    table.add_row("Document ID", str(result.document_id))
-    table.add_row("Status", result.status)
-    table.add_row("Document Type", result.document_type)
-    table.add_row("Processing Time", f"{result.processing_time_seconds:.2f}s")
-
-    # Model info
-    if result.model_version:
-        table.add_row("Model Version", result.model_version)
-    if result.prompt_version:
-        table.add_row("Prompt Version", result.prompt_version)
-
-    # Token usage
-    if result.token_usage:
+    # Handle both enum and string document_type
+    doc_type_value = (
+        result.document_type.value
+        if hasattr(result.document_type, "value")
+        else result.document_type
+    )
+    table.add_row("Document Type", doc_type_value)
+    if hasattr(result, "extraction_metadata") and result.extraction_metadata:
         table.add_row(
-            "Token Usage",
-            f"In: {result.token_usage.input_tokens}, Out: {result.token_usage.output_tokens}",
+            "Processing Time",
+            f"{result.extraction_metadata.processing_time_seconds:.2f}s",
         )
+        # Model info
+        if result.extraction_metadata.model_version:
+            table.add_row("Model Version", result.extraction_metadata.model_version)
+        if result.extraction_metadata.prompt_version:
+            table.add_row("Prompt Version", result.extraction_metadata.prompt_version)
 
-    # Company/Report info
-    if result.extracted_data:
-        if isinstance(result.extracted_data, AnnualReportExtraction):
-            table.add_row("Company Name", result.extracted_data.company_name_full)
-            table.add_row("Company Code", result.extracted_data.company_code)
-            table.add_row("Exchange", result.extracted_data.exchange)
+        # Token usage
+        if result.extraction_metadata.token_usage:
+            table.add_row(
+                "Token Usage",
+                f"In: {result.extraction_metadata.token_usage.get('input_tokens', 0)}, Out: {result.extraction_metadata.token_usage.get('output_tokens', 0)}",
+            )
+
+    # Company/Report info - handle both extraction_data and extracted_data
+    data = getattr(result, "extraction_data", None) or getattr(
+        result, "extracted_data", None
+    )
+    if data:
+        if hasattr(data, "company_name_full"):
+            table.add_row("Company Name", data.company_name_full)
+        if hasattr(data, "company_code"):
+            table.add_row("Company Code", data.company_code)
+        if hasattr(data, "exchange"):
+            table.add_row("Exchange", data.exchange)
+        if hasattr(data, "business_concepts"):
             table.add_row(
                 "Business Concepts",
-                str(len(result.extracted_data.business_concepts)),
+                str(len(data.business_concepts)),
             )
-        elif isinstance(result.extracted_data, ResearchReportExtraction):
-            table.add_row("Report Title", result.extracted_data.report_title)
-            table.add_row("Company Name", result.extracted_data.company_name_full)
-            table.add_row("Investment Rating", result.extracted_data.investment_rating)
+        if hasattr(data, "report_title"):
+            table.add_row("Report Title", data.report_title)
+        if hasattr(data, "investment_rating"):
+            table.add_row("Investment Rating", data.investment_rating)
 
     return table
 
 
-def save_result_to_file(
-    result: DocumentExtractionResult, output_path: Path | None
-) -> Path:
+def save_result_to_file(result, output_path: Path | None) -> Path:
     """Save extraction result to JSON file."""
     if output_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -144,12 +152,18 @@ def save_result_to_file(
     is_flag=True,
     help="Disable progress indicators",
 )
+@click.option(
+    "--skip-archive",
+    is_flag=True,
+    help="Skip archiving extraction result to database",
+)
 def extract_document(
     file_path: Path,
     document_type: str,
     output: Path | None,
     debug: bool,
     no_progress: bool,
+    skip_archive: bool,
 ) -> None:
     """Extract structured data from financial documents using LLM.
 
@@ -168,7 +182,7 @@ def extract_document(
         settings = Settings()
 
         # Validate settings
-        if not settings.llm.gemini_api_key:
+        if not settings.llm.gemini_api_key.get_secret_value():
             console.print(
                 "[red]Error: GEMINI_API_KEY environment variable not set[/red]"
             )
@@ -195,7 +209,9 @@ def extract_document(
                 "[cyan]Initializing LLM service...", total=None
             )
             llm_service = GeminiLLMAdapter(settings)
-            use_case = ExtractDocumentDataUseCase(llm_service, settings)
+
+            # Initialize use case (archive repository will be set up in async context)
+            use_case = ExtractDocumentDataUseCase(llm_service, None)
             progress.update(task_init, completed=100)
 
             # Extract data
@@ -210,37 +226,59 @@ def extract_document(
                 file_size=len(document.content),
             )
 
-            result = use_case.execute(
-                document_content=document.content,
-                document_type=document_type,
-                document_metadata=document.metadata,
-            )
+            # Run async execute method
+            async def run_extraction():
+                # Set up archive repository in async context if needed
+                if not skip_archive:
+                    from src.infrastructure.persistence.postgres.connection import (
+                        get_session,
+                    )
+                    from src.infrastructure.persistence.postgres.source_document_repository import (
+                        PostgresSourceDocumentRepository,
+                    )
+
+                    async with get_session() as session:
+                        repo = PostgresSourceDocumentRepository(session)
+                        from src.application.use_cases.archive_extraction_result import (
+                            ArchiveExtractionResultUseCase,
+                        )
+
+                        use_case.archive_use_case = ArchiveExtractionResultUseCase(repo)
+
+                        return await use_case.execute(
+                            file_path=str(file_path),
+                            company_name=None,
+                            document_type_override=document_type,
+                        )
+                else:
+                    return await use_case.execute(
+                        file_path=str(file_path),
+                        company_name=None,
+                        document_type_override=document_type,
+                    )
+
+            # Run the async function
+            import asyncio
+
+            result = asyncio.run(run_extraction())
 
             elapsed_time = time.time() - start_time
             progress.update(task_extract, completed=100)
 
             logger.info(
                 "Extraction completed",
-                status=result.status,
                 elapsed_time=f"{elapsed_time:.2f}s",
             )
 
-        # Display results
-        if result.status == "success":
-            console.print(
-                f"\n[green]✓ Extraction completed successfully in {elapsed_time:.2f}s[/green]\n"
-            )
-            console.print(format_extraction_result(result))
+        # Display results (if we get here, extraction was successful)
+        console.print(
+            f"\n[green]✓ Extraction completed successfully in {elapsed_time:.2f}s[/green]\n"
+        )
+        console.print(format_extraction_result(result))
 
-            # Save to file
-            output_file = save_result_to_file(result, output)
-            console.print(f"[cyan]Result saved to:[/cyan] {output_file}")
-
-        else:
-            console.print(f"\n[red]✗ Extraction failed: {result.error}[/red]")
-            if debug and result.raw_output:
-                console.print(f"\n[yellow]Raw output:[/yellow]\n{result.raw_output}")
-            sys.exit(1)
+        # Save to file
+        output_file = save_result_to_file(result, output)
+        console.print(f"[cyan]Result saved to:[/cyan] {output_file}")
 
     except DocumentProcessingError as e:
         logger.error("Document processing error", error=str(e))

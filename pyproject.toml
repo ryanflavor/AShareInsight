@@ -84,3 +84,50 @@ testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.13"
+# Start with less strict settings and gradually increase
+warn_return_any = false
+warn_unused_configs = true
+no_implicit_reexport = true
+namespace_packages = true
+explicit_package_bases = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_incomplete_stub = false
+# Focus on import errors and basic type safety
+show_error_codes = true
+pretty = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = [
+    "tests.*",
+    "alembic.*"
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "langchain.*",
+    "langchain_community.*",
+    "langchain_postgres.*",
+    "langchain_google_genai.*",
+    "sqlalchemy.*",
+    "structlog.*",
+    "tqdm.*",
+    "click.*",
+    "rich.*",
+    "pytest.*",
+    "opentelemetry.*",
+    "prometheus_client.*",
+    "pgvector.*",
+    "ragas.*",
+    "httpx.*",
+    "redis.*",
+    "uvicorn.*",
+    "psycopg.*"
+]
+ignore_missing_imports = true

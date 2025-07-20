@@ -147,7 +147,7 @@ class TestEnvironmentInitialization:
         with db_connection.cursor() as cur:
             cur.execute(
                 """
-                SELECT 
+                SELECT
                     tc.constraint_name,
                     tc.table_name,
                     kcu.column_name,

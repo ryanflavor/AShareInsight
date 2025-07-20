@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.ports.llm_service import LLMServicePort
 from src.domain.entities.company import AnnualReportExtraction
+from src.domain.entities.extraction import DocumentType
 from src.domain.entities.research_report import ResearchReportExtraction
 from src.infrastructure.llm.langchain.gemini_adapter import GeminiAdapter
 from src.infrastructure.llm.langchain.parsers import (
@@ -120,6 +121,14 @@ class GeminiLLMAdapter(LLMServicePort):
                     token_usage = result.llm_output.get("token_usage", {})
                     input_tokens = token_usage.get("prompt_tokens", 0)
                     output_tokens = token_usage.get("completion_tokens", 0)
+                elif (
+                    hasattr(result, "additional_kwargs")
+                    and "usage" in result.additional_kwargs
+                ):
+                    # Handle AIMessage with usage metadata
+                    usage = result.additional_kwargs["usage"]
+                    input_tokens = usage.get("prompt_tokens", 0)
+                    output_tokens = usage.get("completion_tokens", 0)
 
                 # Get response content from ChatResult/AIMessage
                 if isinstance(result, str):
@@ -127,7 +136,8 @@ class GeminiLLMAdapter(LLMServicePort):
                 elif hasattr(result, "content"):
                     response_content = result.content
                 elif hasattr(result, "generations") and result.generations:
-                    response_content = result.generations[0][0].text
+                    # ChatResult.generations is a list of ChatGeneration objects
+                    response_content = result.generations[0].text
                 else:
                     response_content = str(result)
 
@@ -177,7 +187,7 @@ class GeminiLLMAdapter(LLMServicePort):
                     duration_seconds=duration,
                 )
 
-                if isinstance(e, (LLMServiceError, ValidationError)):
+                if isinstance(e, LLMServiceError | ValidationError):
                     raise
                 raise LLMServiceError(f"Failed to extract annual report: {str(e)}")
 
@@ -259,6 +269,14 @@ class GeminiLLMAdapter(LLMServicePort):
                     token_usage = result.llm_output.get("token_usage", {})
                     input_tokens = token_usage.get("prompt_tokens", 0)
                     output_tokens = token_usage.get("completion_tokens", 0)
+                elif (
+                    hasattr(result, "additional_kwargs")
+                    and "usage" in result.additional_kwargs
+                ):
+                    # Handle AIMessage with usage metadata
+                    usage = result.additional_kwargs["usage"]
+                    input_tokens = usage.get("prompt_tokens", 0)
+                    output_tokens = usage.get("completion_tokens", 0)
 
                 # Get response content from ChatResult/AIMessage
                 if isinstance(result, str):
@@ -266,7 +284,8 @@ class GeminiLLMAdapter(LLMServicePort):
                 elif hasattr(result, "content"):
                     response_content = result.content
                 elif hasattr(result, "generations") and result.generations:
-                    response_content = result.generations[0][0].text
+                    # ChatResult.generations is a list of ChatGeneration objects
+                    response_content = result.generations[0].text
                 else:
                     response_content = str(result)
 
@@ -316,7 +335,7 @@ class GeminiLLMAdapter(LLMServicePort):
                     duration_seconds=duration,
                 )
 
-                if isinstance(e, (LLMServiceError, ValidationError)):
+                if isinstance(e, LLMServiceError | ValidationError):
                     raise
                 raise LLMServiceError(f"Failed to extract research report: {str(e)}")
 
@@ -336,7 +355,7 @@ class GeminiLLMAdapter(LLMServicePort):
             "research_report_prompt_version": self.research_report_prompt.get_version(),
         }
 
-    def detect_document_type(self, content: str) -> str:
+    def detect_document_type(self, content: str) -> DocumentType:
         """Detect the type of document from its content.
 
         Args:
@@ -380,4 +399,8 @@ class GeminiLLMAdapter(LLMServicePort):
         )
 
         # Default to annual report if unclear
-        return "research_report" if research_score > annual_score else "annual_report"
+        return (
+            DocumentType.RESEARCH_REPORT
+            if research_score > annual_score
+            else DocumentType.ANNUAL_REPORT
+        )

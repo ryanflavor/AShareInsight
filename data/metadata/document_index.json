@@ -104,9 +104,23 @@
       "document_type": "annual_report",
       "extracted_path": "extracted/annual_report/澄天伟业_2024年年度报告摘要_extracted.json",
       "added_date": "2025-07-20T18:37:39.167081"
+    },
+    {
+      "document_id": "research_report_芭田股份-002170-小高寨磷矿迎来放量，助推业绩高增，二期扩能稳步推进",
+      "file_path": "data/research_reports/2024/芭田股份-002170-小高寨磷矿迎来放量，助推业绩高增，二期扩能稳步推进.txt",
+      "document_type": "research_report",
+      "extracted_path": "extracted/research_report/芭田股份-002170-小高寨磷矿迎来放量，助推业绩高增，二期扩能稳步推进_extracted.json",
+      "added_date": "2025-07-20T19:31:03.574464"
+    },
+    {
+      "document_id": "research_report_百润股份-002568-威士忌产品矩阵初成",
+      "file_path": "data/research_reports/2024/百润股份-002568-威士忌产品矩阵初成.txt",
+      "document_type": "research_report",
+      "extracted_path": "extracted/research_report/百润股份-002568-威士忌产品矩阵初成_extracted.json",
+      "added_date": "2025-07-20T21:12:25.061561"
     }
   ],
-  "total_count": 15,
-  "last_updated": "2025-07-20T18:37:39.167089",
+  "total_count": 17,
+  "last_updated": "2025-07-20T21:12:25.061567",
   "schema_version": "1.0"
 }

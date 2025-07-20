@@ -1,0 +1,39 @@
+repos:
+  # Format with Black
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        language_version: python3.13
+
+  # Lint with Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.14
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  # Type check with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-click
+          - types-tqdm
+          - types-redis
+          - pydantic>=2.0.0
+        args: [--config-file=pyproject.toml]
+        exclude: ^(tests/|alembic/)
+        
+  # Check for missing imports
+  - repo: local
+    hooks:
+      - id: check-imports
+        name: Check imports
+        entry: mypy
+        language: system
+        types: [python]
+        args: [--no-error-summary, --no-pretty, --show-error-codes]
+        files: ^src/
+        pass_filenames: true

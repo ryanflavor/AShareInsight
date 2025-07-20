@@ -4,10 +4,14 @@ import asyncio
 import time
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
 from src.application.ports.llm_service import LLMServicePort
+from src.application.ports.source_document_repository import (
+    SourceDocumentRepositoryPort,
+)
 from src.domain.entities import (
     AnnualReportExtraction,
     DocumentType,
@@ -48,15 +52,29 @@ class ProcessingState(BaseModel):
 class ExtractDocumentDataUseCase:
     """Use case for extracting data from documents."""
 
-    def __init__(self, llm_service: LLMServicePort):
+    def __init__(
+        self,
+        llm_service: LLMServicePort,
+        archive_repository: SourceDocumentRepositoryPort | None = None,
+    ):
         """Initialize use case.
 
         Args:
             llm_service: LLM service implementation.
+            archive_repository: Optional repository for archiving extraction results.
         """
         self.llm_service = llm_service
         self.document_loader = DocumentLoader()
         self.state = ProcessingState()
+        self.archive_use_case = None
+
+        # Import here to avoid circular dependency
+        from src.application.use_cases.archive_extraction_result import (
+            ArchiveExtractionResultUseCase,
+        )
+
+        if archive_repository:
+            self.archive_use_case = ArchiveExtractionResultUseCase(archive_repository)
 
     async def execute(
         self,
@@ -108,6 +126,38 @@ class ExtractDocumentDataUseCase:
             extraction_data, extraction_metadata = await self._extract_data(
                 doc_type, document.content, company_info
             )
+
+            # Step 3.5: Archive extraction result if archiving is enabled
+            if self.archive_use_case:
+                self.state.update(
+                    ProcessingStatus.EXTRACTING, "正在归档原始数据...", 80.0
+                )
+
+                # Prepare raw LLM output for archiving
+                raw_llm_output = self._prepare_raw_output(
+                    extraction_data, extraction_metadata, doc_type
+                )
+
+                # Prepare metadata for archiving
+                archive_metadata = self._prepare_archive_metadata(
+                    document, doc_type, company_info, file_path, extraction_data
+                )
+
+                try:
+                    await self.archive_use_case.execute(
+                        raw_llm_output=raw_llm_output,
+                        metadata=archive_metadata,
+                    )
+                except Exception as e:
+                    # Log error but don't fail the extraction
+                    import structlog
+
+                    logger = structlog.get_logger(__name__)
+                    logger.error(
+                        "archiving_failed",
+                        error=str(e),
+                        company_code=company_info.get("company_code"),
+                    )
 
             # Step 4: Create final result
             self.state.update(ProcessingStatus.COMPLETED, "提取完成", 100.0)
@@ -196,7 +246,7 @@ class ExtractDocumentDataUseCase:
         """
         return self.state
 
-    def get_progress_info(self) -> dict[str, any]:
+    def get_progress_info(self) -> dict[str, Any]:
         """Get user-friendly progress information.
 
         Returns:
@@ -216,4 +266,92 @@ class ExtractDocumentDataUseCase:
             "elapsed_time_seconds": elapsed_time,
             "estimated_remaining_seconds": estimated_remaining,
             "error_message": self.state.error_message,
+        }
+
+    def _prepare_raw_output(
+        self,
+        extraction_data: AnnualReportExtraction | ResearchReportExtraction,
+        extraction_metadata: ExtractionMetadata,
+        doc_type: DocumentType,
+    ) -> dict[str, Any]:
+        """Prepare raw LLM output for archiving.
+
+        Args:
+            extraction_data: The extracted data entity
+            extraction_metadata: The extraction metadata
+            doc_type: The document type
+
+        Returns:
+            Dictionary representing the raw LLM output
+        """
+        # Convert entities to dict for archiving
+        raw_output = {
+            "document_type": doc_type.value,
+            "extraction_data": extraction_data.model_dump(),
+            "extraction_metadata": extraction_metadata.model_dump(),
+            "status": "success",
+            "timestamp": extraction_metadata.extraction_timestamp.isoformat(),
+        }
+
+        return raw_output
+
+    def _prepare_archive_metadata(
+        self,
+        document: ProcessedDocument,
+        doc_type: DocumentType,
+        company_info: dict[str, str],
+        file_path: str | Path,
+        extraction_data: AnnualReportExtraction | ResearchReportExtraction,
+    ) -> dict[str, Any]:
+        """Prepare metadata for archiving.
+
+        Args:
+            document: The processed document
+            doc_type: The document type
+            company_info: Company information from filename parsing
+            file_path: Original file path
+            extraction_data: Extracted data from LLM containing company_code
+
+        Returns:
+            Dictionary with archive metadata
+        """
+        # Extract date from filename or use today
+        import re
+        from datetime import date as dt
+
+        doc_date = dt.today()
+        file_name = Path(file_path).name
+
+        # Try to extract date from filename (e.g., 2024 or 20240120)
+        date_match = re.search(r"(\d{8}|\d{4})", file_name)
+        if date_match:
+            date_str = date_match.group(1)
+            if len(date_str) == 4:
+                # Year only, assume end of year
+                doc_date = dt(int(date_str), 12, 31)
+            else:
+                # Full date YYYYMMDD
+                doc_date = dt(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]))
+
+        # Build report title
+        company_name = company_info.get("company_name", "")
+        if doc_type == DocumentType.ANNUAL_REPORT:
+            report_title = f"{company_name}{doc_date.year}年年度报告"
+        else:
+            report_title = f"{company_name}研究报告"
+
+        # Get company_code from extraction_data (extracted by LLM)
+        company_code = (
+            extraction_data.company_code
+            if hasattr(extraction_data, "company_code")
+            else ""
+        )
+
+        return {
+            "company_code": company_code,
+            "doc_type": doc_type.value,
+            "doc_date": doc_date,
+            "report_title": report_title,
+            "file_path": str(file_path),
+            "file_hash": document.metadata.file_hash,
         }

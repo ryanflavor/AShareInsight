@@ -1,5 +1,6 @@
 """Unit tests for extract_document CLI."""
 
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,7 +10,9 @@ from pydantic import ValidationError
 from src.domain.entities.company import AnnualReportExtraction
 from src.domain.entities.extraction import (
     DocumentExtractionResult,
-    TokenUsage,
+    DocumentType,
+    ExtractionMetadata,
+    ExtractionResult,
 )
 from src.interfaces.cli.extract_document import extract_document
 from src.shared.exceptions import DocumentProcessingError, LLMServiceError
@@ -59,19 +62,23 @@ def mock_extraction_result():
         business_concepts=[],
     )
 
-    return DocumentExtractionResult(
-        document_id="test-doc-id",
-        status="success",
-        document_type="annual_report",
-        extracted_data=company_report,
-        processing_time_seconds=5.5,
-        model_version="gemini-2.5-pro",
-        prompt_version="v1.0",
-        token_usage=TokenUsage(
-            input_tokens=1000,
-            output_tokens=500,
-            total_tokens=1500,
+    # Return ExtractionResult instead since that's what use_case returns
+    return ExtractionResult(
+        document_type=DocumentType.ANNUAL_REPORT,
+        extraction_data=company_report,
+        extraction_metadata=ExtractionMetadata(
+            model_version="gemini-2.5-pro",
+            prompt_version="v1.0",
+            extraction_timestamp=datetime.now(),
+            processing_time_seconds=5.5,
+            token_usage={
+                "input_tokens": 1000,
+                "output_tokens": 500,
+                "total_tokens": 1500,
+            },
+            file_hash="abc123",
         ),
+        raw_llm_response='{"test": "response"}',
     )
 
 
@@ -87,14 +94,19 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,
         ):
             # Setup mocks
             mock_loader.return_value.load.return_value = mock_document
-            mock_use_case.return_value.execute.return_value = mock_extraction_result
+
+            # Create async mock for execute method
+            async def async_execute(*args, **kwargs):
+                return mock_extraction_result
+
+            mock_use_case.return_value.execute = async_execute
 
             # Run CLI
             result = cli_runner.invoke(
@@ -118,14 +130,19 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,
         ):
             # Setup mocks
             mock_loader.return_value.load.return_value = mock_document
-            mock_use_case.return_value.execute.return_value = mock_extraction_result
+
+            # Create async mock for execute method
+            async def async_execute(*args, **kwargs):
+                return mock_extraction_result
+
+            mock_use_case.return_value.execute = async_execute
 
             # Run CLI
             result = cli_runner.invoke(
@@ -154,7 +171,7 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,
@@ -162,7 +179,12 @@ class TestExtractDocumentCLI:
         ):
             # Setup mocks
             mock_loader.return_value.load.return_value = mock_document
-            mock_use_case.return_value.execute.return_value = mock_extraction_result
+
+            # Create async mock for execute method
+            async def async_execute(*args, **kwargs):
+                return mock_extraction_result
+
+            mock_use_case.return_value.execute = async_execute
 
             # Run CLI
             result = cli_runner.invoke(
@@ -185,14 +207,19 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,
         ):
             # Setup mocks
             mock_loader.return_value.load.return_value = mock_document
-            mock_use_case.return_value.execute.return_value = mock_extraction_result
+
+            # Create async mock for execute method
+            async def async_execute(*args, **kwargs):
+                return mock_extraction_result
+
+            mock_use_case.return_value.execute = async_execute
 
             # Run CLI
             result = cli_runner.invoke(
@@ -250,7 +277,7 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,
@@ -277,7 +304,7 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,
@@ -323,14 +350,19 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,
         ):
             # Setup mocks
             mock_loader.return_value.load.return_value = mock_document
-            mock_use_case.return_value.execute.return_value = failed_result
+
+            # Create async mock for execute method that raises exception
+            async def async_execute(*args, **kwargs):
+                raise LLMServiceError("JSON parsing failed")
+
+            mock_use_case.return_value.execute = async_execute
 
             # Run CLI
             result = cli_runner.invoke(
@@ -339,7 +371,7 @@ class TestExtractDocumentCLI:
             )
 
             assert result.exit_code == 1
-            assert "Extraction failed: JSON parsing failed" in result.output
+            assert "LLM service error: JSON parsing failed" in result.output
 
     def test_keyboard_interrupt(
         self, cli_runner, mock_settings, mock_document, tmp_path
@@ -350,7 +382,7 @@ class TestExtractDocumentCLI:
 
         with (
             patch("src.interfaces.cli.extract_document.DocumentLoader") as mock_loader,
-            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter") as mock_llm,
+            patch("src.interfaces.cli.extract_document.GeminiLLMAdapter"),
             patch(
                 "src.interfaces.cli.extract_document.ExtractDocumentDataUseCase"
             ) as mock_use_case,

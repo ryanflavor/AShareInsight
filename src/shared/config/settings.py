@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,7 +10,7 @@ class LLMSettings(BaseSettings):
     """LLM-specific settings."""
 
     gemini_base_url: str = "https://apius.tu-zi.com"
-    gemini_api_key: str = ""
+    gemini_api_key: SecretStr = SecretStr("")
     gemini_model_name: str = "gemini-2.5-pro-preview-06-05"
     gemini_max_tokens: int = 30000
     gemini_temperature: float = 1.0
@@ -34,7 +35,7 @@ class DatabaseSettings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "ashareinsight"
     postgres_user: str = "postgres"
-    postgres_password: str = ""
+    postgres_password: SecretStr = SecretStr("")
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
@@ -44,7 +45,7 @@ class DatabaseSettings(BaseSettings):
     def database_url(self) -> str:
         """Construct database URL from components."""
         return (
-            f"postgresql://{self.postgres_user}:{self.postgres_password}"
+            f"postgresql://{self.postgres_user}:{self.postgres_password.get_secret_value()}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 

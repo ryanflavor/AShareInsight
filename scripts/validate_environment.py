@@ -42,7 +42,6 @@ class EnvironmentValidator:
 
     def check_project_structure(self) -> bool:
         """Check if project directory structure is correct."""
-        print("Checking project structure...")
 
         required_dirs = [
             "src/domain",
@@ -70,12 +69,10 @@ class EnvironmentValidator:
             self.errors.append(f"Missing directories: {', '.join(missing_dirs)}")
             return False
 
-        print("✓ Project structure is correct")
         return True
 
     def check_postgresql(self) -> bool:
         """Check PostgreSQL connection and setup."""
-        print("\nChecking PostgreSQL...")
 
         try:
             conn_string = (
@@ -89,8 +86,7 @@ class EnvironmentValidator:
                 with conn.cursor() as cur:
                     # Check PostgreSQL version
                     cur.execute("SELECT version()")
-                    version = cur.fetchone()[0]
-                    print(f"✓ PostgreSQL connected: {version.split(',')[0]}")
+                    cur.fetchone()[0]
 
                     # Check pgvector extension
                     cur.execute(
@@ -101,14 +97,12 @@ class EnvironmentValidator:
                         self.errors.append("pgvector extension not installed")
                         return False
 
-                    print(f"✓ pgvector extension installed: v{result[0]}")
-
                     # Check tables
                     cur.execute(
                         """
-                        SELECT tablename 
-                        FROM pg_tables 
-                        WHERE schemaname = 'public' 
+                        SELECT tablename
+                        FROM pg_tables
+                        WHERE schemaname = 'public'
                         AND tablename IN ('companies', 'source_documents', 'business_concepts_master')
                         ORDER BY tablename
                     """
@@ -119,14 +113,12 @@ class EnvironmentValidator:
                         self.errors.append(f"Missing tables. Found: {tables}")
                         return False
 
-                    print("✓ All required tables exist")
-
                     # Check halfvec column
                     cur.execute(
                         """
-                        SELECT column_name, udt_name 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'business_concepts_master' 
+                        SELECT column_name, udt_name
+                        FROM information_schema.columns
+                        WHERE table_name = 'business_concepts_master'
                         AND column_name = 'embedding'
                     """
                     )
@@ -137,22 +129,18 @@ class EnvironmentValidator:
                         )
                         return False
 
-                    print("✓ halfvec(2560) column configured")
-
                     # Check HNSW index
                     cur.execute(
                         """
-                        SELECT indexname 
-                        FROM pg_indexes 
-                        WHERE tablename = 'business_concepts_master' 
+                        SELECT indexname
+                        FROM pg_indexes
+                        WHERE tablename = 'business_concepts_master'
                         AND indexname = 'idx_concepts_embedding'
                     """
                     )
                     if not cur.fetchone():
                         self.errors.append("HNSW index not found")
                         return False
-
-                    print("✓ HNSW index exists")
 
                     return True
 
@@ -162,7 +150,6 @@ class EnvironmentValidator:
 
     def check_redis(self) -> bool:
         """Check Redis connection."""
-        print("\nChecking Redis...")
 
         try:
             r = redis.Redis(
@@ -174,11 +161,9 @@ class EnvironmentValidator:
 
             # Ping Redis
             r.ping()
-            print("✓ Redis connected")
 
             # Get Redis info
-            info = r.info()
-            print(f"✓ Redis version: {info['redis_version']}")
+            r.info()
 
             # Test basic operations
             test_key = "_ashareinsight_test"
@@ -190,7 +175,6 @@ class EnvironmentValidator:
                 self.errors.append("Redis read/write test failed")
                 return False
 
-            print("✓ Redis read/write test passed")
             return True
 
         except Exception as e:
@@ -199,7 +183,6 @@ class EnvironmentValidator:
 
     def check_configuration(self) -> bool:
         """Check configuration files."""
-        print("\nChecking configuration files...")
 
         project_root = Path(__file__).parents[1]
 
@@ -225,8 +208,6 @@ class EnvironmentValidator:
                 f"Missing configuration files: {', '.join(missing_files)}"
             )
             return False
-
-        print("✓ All configuration files exist")
 
         # Check if .env has required variables
         env_path = project_root / ".env"
@@ -254,7 +235,6 @@ class EnvironmentValidator:
 
     def check_docker(self) -> bool:
         """Check Docker containers."""
-        print("\nChecking Docker containers...")
 
         import subprocess
 
@@ -287,7 +267,6 @@ class EnvironmentValidator:
                 )
                 return False
 
-            print("✓ All Docker containers are running")
             return True
 
         except subprocess.CalledProcessError:
@@ -299,9 +278,6 @@ class EnvironmentValidator:
 
     def run_validation(self) -> bool:
         """Run all validation checks."""
-        print("=" * 50)
-        print("AShareInsight Environment Validation")
-        print("=" * 50)
 
         checks = [
             ("Project Structure", self.check_project_structure),
@@ -321,32 +297,17 @@ class EnvironmentValidator:
                 self.errors.append(f"{name} check failed with exception: {str(e)}")
                 all_passed = False
 
-        print("\n" + "=" * 50)
-        print("VALIDATION SUMMARY")
-        print("=" * 50)
-
         if self.errors:
-            print("\n❌ ERRORS:")
-            for error in self.errors:
-                print(f"  - {error}")
+            for _error in self.errors:
+                pass
 
         if self.warnings:
-            print("\n⚠️  WARNINGS:")
-            for warning in self.warnings:
-                print(f"  - {warning}")
+            for _warning in self.warnings:
+                pass
 
         if all_passed and not self.errors:
-            print("\n✅ All validation checks passed!")
-            print("\nYour environment is ready for development.")
-            print("\nNext steps:")
-            print(
-                "1. Run the API server: uv run uvicorn src.interfaces.api.main:app --reload"
-            )
-            print("2. Access Adminer at: http://localhost:8124")
-            print("3. Access the API docs at: http://localhost:8000/docs")
             return True
         else:
-            print("\n❌ Validation failed. Please fix the errors above.")
             return False
 
 

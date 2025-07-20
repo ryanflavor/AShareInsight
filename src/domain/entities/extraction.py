@@ -5,7 +5,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from .company import AnnualReportExtraction, CompanyBasicInfo
+from .company import AnnualReportExtraction, BusinessConcept, CompanyBasicInfo
 from .research_report import ResearchReportExtraction
 
 
@@ -53,7 +53,7 @@ class ExtractionResult(BaseModel):
 class CompanyReport(CompanyBasicInfo):
     """Company report model extending CompanyBasicInfo with business concepts."""
 
-    business_concepts: list = Field(
+    business_concepts: list[BusinessConcept] = Field(
         default_factory=list, description="Business concepts list"
     )
 

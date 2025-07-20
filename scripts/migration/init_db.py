@@ -55,8 +55,7 @@ class MigrationRunner:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1")
                     return True
-        except psycopg.OperationalError as e:
-            print(f"Database connection error: {e}")
+        except psycopg.OperationalError:
             return False
 
     def check_pgvector_extension(self) -> bool:
@@ -84,7 +83,6 @@ class MigrationRunner:
 
     def run_migration(self, migration_file: Path) -> None:
         """Execute a single migration file."""
-        print(f"Running migration: {migration_file.name}")
 
         with open(migration_file) as f:
             sql_content = f.read()
@@ -93,8 +91,6 @@ class MigrationRunner:
             with conn.cursor() as cur:
                 cur.execute(sql_content)
             conn.commit()
-
-        print(f"✓ Migration {migration_file.name} completed successfully")
 
     def verify_schema(self) -> None:
         """Verify that all required tables exist."""
@@ -109,9 +105,9 @@ class MigrationRunner:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT tablename 
-                    FROM pg_tables 
-                    WHERE schemaname = 'public' 
+                    SELECT tablename
+                    FROM pg_tables
+                    WHERE schemaname = 'public'
                     AND tablename = ANY(%s)
                     """,
                     (required_tables,),
@@ -121,8 +117,6 @@ class MigrationRunner:
         missing_tables = set(required_tables) - existing_tables
         if missing_tables:
             raise RuntimeError(f"Missing tables: {', '.join(missing_tables)}")
-
-        print("✓ All required tables exist")
 
     def verify_indexes(self) -> None:
         """Verify that all required indexes exist."""
@@ -137,8 +131,8 @@ class MigrationRunner:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT indexname 
-                    FROM pg_indexes 
+                    SELECT indexname
+                    FROM pg_indexes
                     WHERE schemaname = 'public'
                     AND indexname = ANY(%s)
                     """,
@@ -148,39 +142,31 @@ class MigrationRunner:
 
         missing_indexes = set(expected_indexes) - existing_indexes
         if missing_indexes:
-            print(f"⚠ Warning: Missing indexes: {', '.join(missing_indexes)}")
+            pass
         else:
-            print("✓ All required indexes exist")
+            pass
 
     def run_all_migrations(self) -> None:
         """Run all pending migrations."""
         # Check database connectivity
         if not self.check_database_exists():
-            print("❌ Cannot connect to database. Please ensure PostgreSQL is running.")
             sys.exit(1)
 
         # Check pgvector extension
         if not self.check_pgvector_extension():
-            print(
-                "❌ pgvector extension is not available. Please use pgvector Docker image."
-            )
             sys.exit(1)
-
-        print("✓ Database connection established")
-        print("✓ pgvector extension available")
 
         # Get current version
         current_version = self.get_current_version()
         if current_version:
-            print(f"Current schema version: {current_version}")
+            pass
         else:
-            print("No schema version found. Running initial migration...")
+            pass
 
         # Find migration files
         migration_files = sorted(self.migration_dir.glob("*.sql"))
 
         if not migration_files:
-            print("No migration files found")
             return
 
         # Run migrations
@@ -188,25 +174,20 @@ class MigrationRunner:
             # Skip if this migration has already been applied
             # (In a real system, we'd track individual migrations)
             if current_version and current_version >= "1.0.0":
-                print(f"Skipping {migration_file.name} - already applied")
                 continue
 
             self.run_migration(migration_file)
 
         # Verify schema
-        print("\nVerifying database schema...")
         self.verify_schema()
         self.verify_indexes()
 
         # Show final version
-        final_version = self.get_current_version()
-        print(f"\n✅ Database initialization complete! Schema version: {final_version}")
+        self.get_current_version()
 
 
 def main():
     """Main entry point."""
-    print("AShareInsight Database Initialization")
-    print("=" * 40)
 
     # Load settings
     settings = DatabaseSettings()
@@ -216,8 +197,7 @@ def main():
 
     try:
         runner.run_all_migrations()
-    except Exception as e:
-        print(f"\n❌ Error during migration: {e}")
+    except Exception:
         sys.exit(1)
 
 

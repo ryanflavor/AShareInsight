@@ -6,13 +6,9 @@ from .extract_document_data import (
     ProcessingState,
     ProcessingStatus,
 )
-from .extract_document_sync import (
-    ExtractDocumentDataUseCase as ExtractDocumentSyncUseCase,
-)
 
 __all__ = [
     "ExtractDocumentDataUseCase",
-    "ExtractDocumentSyncUseCase",
     "BatchExtractDocumentsUseCase",
     "ProcessingState",
     "ProcessingStatus",

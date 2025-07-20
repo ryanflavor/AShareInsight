@@ -553,13 +553,49 @@
           "error": null
         }
       ]
+    },
+    {
+      "session_id": "20250720_192952",
+      "start_time": "2025-07-20T19:29:55.131241",
+      "total_documents": 1,
+      "processed": 1,
+      "successful": 1,
+      "failed": 0,
+      "documents": [
+        {
+          "file_path": "data/research_reports/2024/芭田股份-002170-小高寨磷矿迎来放量，助推业绩高增，二期扩能稳步推进.txt",
+          "document_type": "research_report",
+          "success": true,
+          "processing_time": 67.974605,
+          "timestamp": "2025-07-20T19:31:03.574432",
+          "error": null
+        }
+      ]
+    },
+    {
+      "session_id": "20250720_211130",
+      "start_time": "2025-07-20T21:11:33.720046",
+      "total_documents": 1,
+      "processed": 1,
+      "successful": 1,
+      "failed": 0,
+      "documents": [
+        {
+          "file_path": "data/research_reports/2024/百润股份-002568-威士忌产品矩阵初成.txt",
+          "document_type": "research_report",
+          "success": true,
+          "processing_time": 50.703181,
+          "timestamp": "2025-07-20T21:12:25.061545",
+          "error": null
+        }
+      ]
     }
   ],
   "statistics": {
-    "total_processed": 48,
-    "successful": 15,
+    "total_processed": 50,
+    "successful": 17,
     "failed": 33,
     "pending": 0
   },
-  "last_updated": "2025-07-20T18:37:39.168575"
+  "last_updated": "2025-07-20T21:12:25.068363"
 }

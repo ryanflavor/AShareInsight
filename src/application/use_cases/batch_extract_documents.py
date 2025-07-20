@@ -12,7 +12,10 @@ import structlog
 from tqdm import tqdm
 
 from src.application.ports.llm_service import LLMServicePort
-from src.domain.entities.extraction import DocumentExtractionResult
+from src.application.ports.source_document_repository import (
+    SourceDocumentRepositoryPort,
+)
+from src.domain.entities.extraction import ExtractionResult
 from src.infrastructure.document_processing.loader import DocumentLoader
 from src.infrastructure.monitoring import LLMMetrics, trace_span
 from src.shared.config.settings import Settings
@@ -23,15 +26,25 @@ logger = structlog.get_logger(__name__)
 class BatchExtractDocumentsUseCase:
     """Batch processing for document extraction with concurrency and rate limiting."""
 
-    def __init__(self, llm_service: LLMServicePort, settings: Settings):
+    def __init__(
+        self,
+        llm_service: LLMServicePort,
+        settings: Settings,
+        archive_repository: SourceDocumentRepositoryPort | None = None,
+        skip_archive: bool = False,
+    ):
         """Initialize batch processor.
 
         Args:
             llm_service: LLM service implementation.
             settings: Application settings.
+            archive_repository: Optional repository for archiving extraction results.
+            skip_archive: Whether to skip archiving entirely.
         """
         self.llm_service = llm_service
         self.settings = settings
+        self.archive_repository = archive_repository
+        self.skip_archive = skip_archive
         self.document_loader = DocumentLoader()
 
         # Rate limiting
@@ -44,7 +57,7 @@ class BatchExtractDocumentsUseCase:
         self.processed_files: set[str] = set()
         self.failed_files: dict[str, str] = {}
 
-    def execute(
+    async def execute(
         self,
         file_paths: list[Path],
         document_type: str,
@@ -100,7 +113,7 @@ class BatchExtractDocumentsUseCase:
                     file_path = future_to_file[future]
 
                     try:
-                        result = future.result()
+                        _ = future.result()
                         self.processed_files.add(str(file_path))
 
                         # Update progress
@@ -153,9 +166,9 @@ class BatchExtractDocumentsUseCase:
             "successful": success_count,
             "failed": len(self.failed_files),
             "total_time_seconds": total_time,
-            "average_time_per_file": total_time / len(self.processed_files)
-            if self.processed_files
-            else 0,
+            "average_time_per_file": (
+                total_time / len(self.processed_files) if self.processed_files else 0
+            ),
             "failed_files": self.failed_files,
         }
 
@@ -163,9 +176,9 @@ class BatchExtractDocumentsUseCase:
 
         return results
 
-    def _process_single_file(
+    async def _process_single_file(
         self, file_path: Path, document_type: str
-    ) -> DocumentExtractionResult:
+    ) -> ExtractionResult:
         """Process a single file with rate limiting.
 
         Args:
@@ -183,28 +196,76 @@ class BatchExtractDocumentsUseCase:
             {"file_path": str(file_path), "document_type": document_type},
         ):
             try:
-                # Load document
-                document = self.document_loader.load(file_path)
+                # Import here to avoid circular dependency
+                from src.application.use_cases.extract_document_data import (
+                    ExtractDocumentDataUseCase,
+                )
 
-                # Extract data
-                if document_type == "annual_report":
-                    extracted_data = self.llm_service.extract_annual_report(
-                        document.content, document.metadata
+                # Create archive use case if archiving is enabled
+                archive_use_case = None
+                if not self.skip_archive:
+                    try:
+                        from src.application.use_cases.archive_extraction_result import (
+                            ArchiveExtractionResultUseCase,
+                        )
+                        from src.infrastructure.persistence.postgres.connection import (
+                            get_session,
+                        )
+                        from src.infrastructure.persistence.postgres.source_document_repository import (
+                            PostgresSourceDocumentRepository,
+                        )
+
+                        # Create a session-scoped archive use case for this file
+                        # The session will be properly managed by the context manager
+                        async with get_session() as session:
+                            repository = PostgresSourceDocumentRepository(session)
+                            archive_use_case = ArchiveExtractionResultUseCase(
+                                repository
+                            )
+
+                            # Create extraction use case with repository
+                            extract_use_case = ExtractDocumentDataUseCase(
+                                self.llm_service, repository
+                            )
+
+                            # Extract data within the session context
+                            result = await extract_use_case.execute(
+                                file_path=str(file_path),
+                                company_name=None,
+                                document_type_override=document_type,
+                            )
+                            # Session will commit on successful exit
+                            return result
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to create archive use case for file",
+                            file_path=str(file_path),
+                            error=str(e),
+                        )
+                        # Fall back to extraction without archiving
+                        archive_use_case = None
+
+                # If archiving is disabled or failed, extract without archiving
+                if archive_use_case is None:
+                    extract_use_case = ExtractDocumentDataUseCase(
+                        self.llm_service, None
                     )
-                else:
-                    extracted_data = self.llm_service.extract_research_report(
-                        document.content, document.metadata
+
+                    result = await extract_use_case.execute(
+                        file_path=str(file_path),
+                        company_name=None,
+                        document_type_override=document_type,
                     )
 
                 # Record success metrics
                 LLMMetrics.record_document_processing(
                     document_type=document_type,
-                    document_size=len(document.content),
-                    processing_time=0,  # Will be calculated by span
+                    document_size=0,  # Will be calculated by use case
+                    processing_time=result.extraction_metadata.processing_time_seconds,
                     success=True,
                 )
 
-                return extracted_data
+                return result
 
             except Exception as e:
                 # Record failure metrics
@@ -216,6 +277,21 @@ class BatchExtractDocumentsUseCase:
                     error=str(e),
                 )
                 raise
+
+    async def _process_with_error_handling(
+        self, file_path: Path, document_type: str
+    ) -> None:
+        """Process a file with error handling for concurrent execution.
+
+        Args:
+            file_path: Path to the file.
+            document_type: Type of document.
+        """
+        try:
+            await self._process_single_file(file_path, document_type)
+        except Exception:
+            # Error is logged in _process_single_file
+            raise
 
     def _apply_rate_limit(self) -> None:
         """Apply rate limiting to respect API limits."""
