@@ -187,11 +187,13 @@ class QwenServiceAdapter(RerankerPort):
                 result = await response.json()
 
                 # Log response metadata without sensitive data
-                logger.info(
-                    f"Rerank response received - "
-                    f"success: {result.get('success', False)}, "
-                    f"result count: {len(result.get('results', []))}"
-                )
+                if logger.isEnabledFor(logging.DEBUG):
+                    result_count = len(result.get("data", {}).get("results", []))
+                    logger.debug(
+                        f"Rerank response received - "
+                        f"success: {result.get('success', False)}, "
+                        f"result count: {result_count}"
+                    )
 
                 # Validate response format
                 if "success" not in result:
@@ -268,7 +270,7 @@ class QwenServiceAdapter(RerankerPort):
         if not self._is_ready:
             try:
                 await self._check_service_health()
-            except Exception:
+            except (httpx.RequestError, ModelLoadError):
                 return False
         return self._is_ready
 

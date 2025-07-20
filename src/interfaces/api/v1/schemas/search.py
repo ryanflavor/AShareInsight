@@ -65,6 +65,12 @@ class SearchSimilarCompaniesRequest(BaseModel):
         ge=1,
         le=100,
     )
+    similarity_threshold: float = Field(
+        0.7,
+        description="Minimum similarity score threshold (0.0-1.0)",
+        ge=0.0,
+        le=1.0,
+    )
     market_filters: MarketFilters | None = Field(
         None,
         description="Optional market-based filtering criteria",

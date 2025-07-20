@@ -84,9 +84,62 @@ class SearchServiceError(AShareInsightException):
         )
 
 
+class DatabaseConnectionError(AShareInsightException):
+    """Raised when database connection fails."""
+
+    def __init__(self, database_name: str, reason: str) -> None:
+        """
+        Initialize DatabaseConnectionError.
+
+        Args:
+            database_name: Name of the database
+            reason: Reason for the connection failure
+        """
+        super().__init__(
+            message=f"Failed to connect to database '{database_name}': {reason}",
+            error_code="DATABASE_CONNECTION_ERROR",
+            details={"database_name": database_name, "reason": reason},
+        )
+
+
+class ModelLoadError(AShareInsightException):
+    """Raised when model loading fails."""
+
+    def __init__(self, message: str) -> None:
+        """
+        Initialize ModelLoadError.
+
+        Args:
+            message: Detailed error message
+        """
+        super().__init__(
+            message=message,
+            error_code="MODEL_LOAD_ERROR",
+        )
+
+
+class ModelInferenceError(AShareInsightException):
+    """Raised when model inference fails."""
+
+    def __init__(self, message: str) -> None:
+        """
+        Initialize ModelInferenceError.
+
+        Args:
+            message: Detailed error message
+        """
+        super().__init__(
+            message=message,
+            error_code="MODEL_INFERENCE_ERROR",
+        )
+
+
 __all__ = [
     "AShareInsightException",
     "CompanyNotFoundError",
     "InvalidFilterError",
     "SearchServiceError",
+    "DatabaseConnectionError",
+    "ModelLoadError",
+    "ModelInferenceError",
 ]

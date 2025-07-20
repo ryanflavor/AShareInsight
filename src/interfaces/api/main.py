@@ -27,12 +27,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         None
     """
     # Startup logic
-    # TODO: Initialize database connections, caches, etc.
+    # Database connections are initialized lazily on first use
 
     yield
 
     # Shutdown logic
-    # TODO: Cleanup resources, close connections, etc.
+    from src.interfaces.api.dependencies import shutdown_dependencies
+
+    await shutdown_dependencies()
 
 
 def create_application() -> FastAPI:
@@ -65,6 +67,15 @@ def create_application() -> FastAPI:
         search.router,
         prefix="/api/v1/search",
         tags=["Search"],
+    )
+
+    # Import and register metrics router
+    from src.interfaces.api.v1.routers import metrics
+
+    app.include_router(
+        metrics.router,
+        prefix="/api/v1/metrics",
+        tags=["Metrics"],
     )
 
     # Register exception handlers

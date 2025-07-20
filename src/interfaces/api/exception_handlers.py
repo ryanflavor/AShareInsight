@@ -36,18 +36,18 @@ def create_error_response(
     Returns:
         JSONResponse: Standardized error response
     """
-    content = {
-        "error": {
-            "code": error_code,
-            "message": message,
-        }
+    error_content: dict[str, Any] = {
+        "code": error_code,
+        "message": message,
     }
 
     if request_id:
-        content["error"]["request_id"] = request_id
+        error_content["request_id"] = request_id
 
     if details:
-        content["error"]["details"] = details
+        error_content["details"] = details
+
+    content = {"error": error_content}
 
     return JSONResponse(
         status_code=status_code,
