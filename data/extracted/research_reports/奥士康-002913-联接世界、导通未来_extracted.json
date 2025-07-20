@@ -1,0 +1,163 @@
+{
+  "document_type": "research_report",
+  "extraction_data": {
+    "company_name_short": "奥士康",
+    "company_code": "002913",
+    "report_title": "奥士康(002913)：AI与汽车电子双轮驱动，PCB业务迈向高端制造",
+    "investment_rating": "买入",
+    "core_thesis": "公司深度受益于AI和汽车电动化、智能化趋势。通过巩固汽车电子PCB领域的优势地位，并迅速切入高增长的AIPC及数据中心服务器市场，公司正向高频高速、高附加值的高端PCB产品转型。凭借与下游头部客户的深度合作和持续的技术投入，公司有望迎来新的业绩增长极。",
+    "profit_forecast": [
+      {
+        "year": 2025,
+        "metric": "营业收入",
+        "value": 5500000000.0,
+        "yoy_growth": null
+      },
+      {
+        "year": 2026,
+        "metric": "营业收入",
+        "value": 6720000000.0,
+        "yoy_growth": null
+      },
+      {
+        "year": 2027,
+        "metric": "营业收入",
+        "value": 8120000000.0,
+        "yoy_growth": null
+      },
+      {
+        "year": 2025,
+        "metric": "归母净利润",
+        "value": 540000000.0,
+        "yoy_growth": null
+      },
+      {
+        "year": 2026,
+        "metric": "归母净利润",
+        "value": 700000000.0,
+        "yoy_growth": null
+      },
+      {
+        "year": 2027,
+        "metric": "归母净利润",
+        "value": 920000000.0,
+        "yoy_growth": null
+      }
+    ],
+    "valuation": [],
+    "comparable_companies": [],
+    "risk_factors": [
+      "全球贸易格局变化的风险",
+      "市场竞争加剧风险",
+      "原材料价格上涨风险",
+      "行业周期性波动风险"
+    ],
+    "business_concepts": [
+      {
+        "concept_name": "汽车电子PCB",
+        "concept_category": "核心业务",
+        "description": "公司聚焦于满足新能源汽车电动化（电控系统）与智能化（智能座舱、驾驶自动化系统）所带来的PCB需求，通过持续投入下一代技术研发和拓展高端客户，巩固其在汽车电子PCB领域的市场地位，并将其打造为新的业绩增长极。",
+        "importance_score": 0.9,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "成功与多家国际知名汽车品牌及Tier1供应商建立了长期稳定的合作关系。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "国际知名汽车品牌",
+            "Tier1供应商"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "公司聚焦满足汽车电动化过程中的电控系统、智能化过程中智能座舱及驾驶自动化系统所带来的PCB需求，持续投入下一代技术研发，进一步强化在智能汽车领域的优势，形成新的业绩增长极。",
+          "凭借优质的产品与服务，成功与多家国际知名汽车品牌及Tier1供应商建立了长期稳定的合作关系，进一步巩固公司在汽车电子PCB领域的市场地位。"
+        ],
+        "key_products_or_brands": []
+      },
+      {
+        "concept_name": "AIPC PCB",
+        "concept_category": "新兴业务",
+        "description": "公司在AIPC市场兴起之初便迅速切入，通过与行业内多家PC厂商建立深度合作，提供定制化的PCB产品解决方案，目前已实现稳定供货，抢占了市场先机。",
+        "importance_score": 0.8,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "目前，公司AIPC产品已实现稳定供货。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [
+            "行业内多家PC厂商"
+          ],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "在AIPC市场兴起之初，公司迅速切入该领域，通过与行业内多家PC厂商建立深度合作关系，深入了解客户需求，为客户提供定制化的产品解决方案。",
+          "目前，公司AIPC产品已实现稳定供货。"
+        ],
+        "key_products_or_brands": []
+      },
+      {
+        "concept_name": "数据中心与服务器PCB",
+        "concept_category": "核心业务",
+        "description": "为把握AI算力需求激增带来的市场机遇，公司针对数据中心及服务器领域的高性能、高可靠性要求，通过丰富产品矩阵，推出了一系列高性能PCB产品，以提升市场竞争力并巩固其市场地位。",
+        "importance_score": 0.85,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "推出一系列满足数据中心及服务器应用需求的高性能PCB产品。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "受AI算力需求激增驱动，服务器市场显著放量。",
+          "公司洞察该领域对PCB产品在高性能、高可靠性方面的高端要求，通过不断丰富产品矩阵，推出一系列满足数据中心及服务器应用需求的高性能PCB产品，有效提升公司在该领域的市场竞争力，进一步巩固公司在数据中心及服务器PCB市场的地位。"
+        ],
+        "key_products_or_brands": []
+      }
+    ]
+  },
+  "extraction_metadata": {
+    "model_version": "gemini-2.5-pro-preview-06-05",
+    "prompt_version": "1.0.0",
+    "extraction_timestamp": "2025-07-20T18:28:44.613657",
+    "processing_time_seconds": 41.987008571624756,
+    "token_usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0
+    },
+    "file_hash": "26eada4c4c8465ad719d8767db0567f18830dbef1b20abe6c253885d602433f2"
+  },
+  "raw_llm_response": ""
+}

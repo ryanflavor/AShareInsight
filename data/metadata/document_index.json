@@ -1,0 +1,112 @@
+{
+  "documents": [
+    {
+      "document_id": "annual_report_300663_科蓝软件_2024_annual_report",
+      "file_path": "data/annual_reports/2024/300663_科蓝软件_2024_annual_report.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/300663_科蓝软件_2024_annual_report_extracted.json",
+      "added_date": "2025-07-20T18:12:11.103603"
+    },
+    {
+      "document_id": "annual_report_300663_科蓝软件_2024_annual_report",
+      "file_path": "data/annual_reports/2024/300663_科蓝软件_2024_annual_report.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/300663_科蓝软件_2024_annual_report_extracted.json",
+      "added_date": "2025-07-20T18:17:09.781812"
+    },
+    {
+      "document_id": "annual_reports_300257_开山股份_2024_annual_report",
+      "file_path": "data/annual_reports/2024/300257_开山股份_2024_annual_report.md",
+      "document_type": "annual_reports",
+      "extracted_path": "extracted/annual_reports/300257_开山股份_2024_annual_report_extracted.json",
+      "added_date": "2025-07-20T18:23:20.776013"
+    },
+    {
+      "document_id": "research_report_奥士康-002913-联接世界、导通未来",
+      "file_path": "data/research_reports/2024/奥士康-002913-联接世界、导通未来.txt",
+      "document_type": "research_report",
+      "extracted_path": "extracted/research_report/奥士康-002913-联接世界、导通未来_extracted.json",
+      "added_date": "2025-07-20T18:28:44.615430"
+    },
+    {
+      "document_id": "research_report_002747_埃斯顿_20240120_人形机器人新品发布",
+      "file_path": "data/research_reports/2024/002747_埃斯顿_20240120_人形机器人新品发布.txt",
+      "document_type": "research_report",
+      "extracted_path": "extracted/research_report/002747_埃斯顿_20240120_人形机器人新品发布_extracted.json",
+      "added_date": "2025-07-20T18:28:49.005398"
+    },
+    {
+      "document_id": "research_report_奥来德-688378-材料实现单季度扭亏，中标京东方8.6代线设备订单",
+      "file_path": "data/research_reports/2024/奥来德-688378-材料实现单季度扭亏，中标京东方8.6代线设备订单.txt",
+      "document_type": "research_report",
+      "extracted_path": "extracted/research_report/奥来德-688378-材料实现单季度扭亏，中标京东方8.6代线设备订单_extracted.json",
+      "added_date": "2025-07-20T18:28:53.574816"
+    },
+    {
+      "document_id": "research_report_688488_艾迪药业_20240115_公司信息更新报告",
+      "file_path": "data/research_reports/2024/688488_艾迪药业_20240115_公司信息更新报告.txt",
+      "document_type": "research_report",
+      "extracted_path": "extracted/research_report/688488_艾迪药业_20240115_公司信息更新报告_extracted.json",
+      "added_date": "2025-07-20T18:28:54.282438"
+    },
+    {
+      "document_id": "research_report_奥海科技-002993-端侧AI驱动充电龙头成长，新能源汽车_服务器业务贡献新增长极",
+      "file_path": "data/research_reports/2024/奥海科技-002993-端侧AI驱动充电龙头成长，新能源汽车_服务器业务贡献新增长极.txt",
+      "document_type": "research_report",
+      "extracted_path": "extracted/research_report/奥海科技-002993-端侧AI驱动充电龙头成长，新能源汽车_服务器业务贡献新增长极_extracted.json",
+      "added_date": "2025-07-20T18:29:03.621607"
+    },
+    {
+      "document_id": "annual_report_磁谷科技_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/磁谷科技_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/磁谷科技_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T18:31:12.010470"
+    },
+    {
+      "document_id": "annual_report_扬帆新材_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/扬帆新材_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/扬帆新材_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T18:35:24.497866"
+    },
+    {
+      "document_id": "annual_report_广和通_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/广和通_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/广和通_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T18:35:26.993108"
+    },
+    {
+      "document_id": "annual_report_双一科技_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/双一科技_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/双一科技_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T18:35:34.763731"
+    },
+    {
+      "document_id": "annual_report_联合光电_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/联合光电_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/联合光电_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T18:35:43.527583"
+    },
+    {
+      "document_id": "annual_report_创业黑马_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/创业黑马_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/创业黑马_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T18:36:08.969948"
+    },
+    {
+      "document_id": "annual_report_澄天伟业_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/澄天伟业_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/澄天伟业_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T18:37:39.167081"
+    }
+  ],
+  "total_count": 15,
+  "last_updated": "2025-07-20T18:37:39.167089",
+  "schema_version": "1.0"
+}

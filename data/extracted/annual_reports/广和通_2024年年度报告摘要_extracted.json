@@ -1,0 +1,201 @@
+{
+  "document_type": "annual_report",
+  "extraction_data": {
+    "company_name_full": "深圳市广和通无线股份有限公司",
+    "company_name_short": "广和通",
+    "company_code": "300638",
+    "exchange": "深圳证券交易所",
+    "top_shareholders": [
+      {
+        "name": "张天瑜",
+        "holding_percentage": 36.77
+      },
+      {
+        "name": "香港中央结算有限公司",
+        "holding_percentage": 3.45
+      },
+      {
+        "name": "应凌鹏",
+        "holding_percentage": 3.33
+      },
+      {
+        "name": "新余市广和创虹企业管理中心(有限合伙)",
+        "holding_percentage": 2.52
+      },
+      {
+        "name": "招商银行股份有限公司-南方中证1000交易型开放式指数证券投资基金",
+        "holding_percentage": 0.49
+      },
+      {
+        "name": "李绪坤",
+        "holding_percentage": 0.49
+      },
+      {
+        "name": "深圳市乾图私募基金管理有限公司-乾图唐玄甲私募证券投资基金",
+        "holding_percentage": 0.49
+      },
+      {
+        "name": "郭星炎",
+        "holding_percentage": 0.44
+      },
+      {
+        "name": "叶志斌",
+        "holding_percentage": 0.43
+      },
+      {
+        "name": "吴金魁",
+        "holding_percentage": 0.41
+      }
+    ],
+    "business_concepts": [
+      {
+        "concept_name": "无线通信模组",
+        "concept_category": "核心业务",
+        "description": "公司主营业务，致力于物联网与移动互联网无线通信技术，主要从事无线通信模块及其应用行业的通信解决方案的设计、研发与销售。产品矩阵覆盖2G/3G/4G/5G/NB-IOT蜂窝无线通信模组、AIoT模组、Wi-Fi模组、GNSS模组等，是公司业务的基石，应用于汽车电子、智慧家庭、消费电子等多个行业。",
+        "importance_score": 0.95,
+        "development_stage": "成熟期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2024年，公司持续丰富产品矩阵，发布了5G RedCap模组FM330系列、LTE Cat.1 bis模组MC610-GL、Wi-Fi 7模组WN372-GL以及多款智能模组。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [
+            "高通",
+            "品佳",
+            "湘海电子",
+            "南基",
+            "世平",
+            "比亚迪",
+            "海格"
+          ],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "公司自成立以来一直致力于物联网与移动互联网无线通信技术和应用的推广及其解决方案的应用拓展,在通信技术、 射频技术、数据传输技术、信号处理技术上形成了较强的研发实力,是无线通信技术领域拥有自主知识产权的专业产品 与方案提供商。",
+          "公司在物联网产业链中处于网络层,并涉及与感知层的交叉领域,主要从事无线通信模块及其应用行业的通信解决方案的设计、研发与销售服务。",
+          "公司产品覆盖 2G/3G/4G/5G/NB-IOT 蜂窝无线通信模组、AIoT 模组、Wi-Fi 模组、GNSS 模组以及基于其行业应用的通信解决方案,具身智能机器人开发平台,全球资费和云服务等,广泛应用于汽车电子、智慧家庭、消费电子、智慧零售、低空经济、机器人等数智化升级的行业。"
+        ]
+      },
+      {
+        "concept_name": "车联网业务",
+        "concept_category": "核心业务",
+        "description": "公司车联网业务是其重要的垂直应用领域和收入来源之一。报告期内，公司出售了车载前装（Rolling Wireless）业务，但通过子公司广通远驰继续聚焦该领域，持续布局第3代5G/5G+V2X车联网模组、AI大模型智能座舱平台，并与产业伙伴合作推动车机互联发展。",
+        "importance_score": 0.85,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2024年7月26日，公司完成车载前装无线通信模组业务的出售，不再持有卢森堡锐凌股权。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": 23.34,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [
+            "智慧车联开放联盟",
+            "行业大模型商"
+          ],
+          "subsidiaries_or_investees": [
+            "广通远驰"
+          ]
+        },
+        "source_sentences": [
+          "剔除锐凌无线车载前装业务的影响,公司营业收入同比增长 23.34%;收入的增长主要来自于国内汽车电子及智慧家庭领域中 5G 固定无线接入(FWA)业务领域。",
+          "广通远驰持续布局第 3 代 5G/5G+V2X 车联网模组、扩充 AI 大模型智能座舱 SOC 类型和产品,聚焦 AI 高算力芯片和国产化芯片技术平台的创新,率先推出 3nm 旗舰级 AI 大模型智能座舱平台。",
+          "广通远驰加入“智慧车联开放联盟”,携手上下游车联产业、手机厂商推动中国车机互联智慧化进程;和行业大模型商合作将大模型搭载在远驰智能网联模组上赋能行业。"
+        ]
+      },
+      {
+        "concept_name": "5G固定无线接入(FWA)解决方案",
+        "concept_category": "新兴业务",
+        "description": "公司在智慧家庭领域的重要增长业务，是报告期内收入增长的主要驱动力之一。公司积极推出创新的FWA解决方案，包括基于骁龙X75的AI赋能5G FWA方案、覆盖MiFi/CPE/Dongle的全系列5G RedCap FWA方案以及5G融合Wi-Fi 7的CPE解决方案，以满足市场需求。",
+        "importance_score": 0.9,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2024年，发布基于骁龙®X75 5G调制解调器及射频系统开发的AI赋能5G FWA解决方案。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [
+            "高通"
+          ],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "报告期内,公司实现营业收入 81.89 亿元,同比增长 6.13%...收入的增长主要来自于国内汽车电子及智慧家庭领域中 5G 固定无线接入(FWA)业务领域。",
+          "发布基于骁龙®X75 5G 调制解调器及射频系统开发由 AI 赋能的 5G 固定无线接入(FWA)解决方案,发布覆盖 MiFi、CPE、Dongle 等全系列商用 5G RedCap FWA 解决方案...",
+          "推出 5G 融合 Wi-Fi 7 智能解决方案,推出基于 FG370 和 Wi-Fi7 芯片组的 5G CPE 解决方案。"
+        ]
+      },
+      {
+        "concept_name": "AI与机器人解决方案",
+        "concept_category": "战略布局",
+        "description": "公司基于无线通信与人工智能技术，提供软硬件一体的全栈式解决方案，向AI、边缘算力、智能机器人等新兴领域拓展。报告期内，公司发布了具身智能机器人开发平台Fibot，以及“免埋线式割草机行业解决方案”、系列Linux边缘AI解决方案和智能边缘计算终端等，显示出在该领域的战略投入。",
+        "importance_score": 0.75,
+        "development_stage": "探索期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2024年，发布基于高通高算力芯片的具身智能机器人开发平台Fibot。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [
+            "高通"
+          ],
+          "subsidiaries_or_investees": [
+            "广翼智联"
+          ]
+        },
+        "source_sentences": [
+          "公司以无线通信与人工智能为技术底座,提供软硬件一体、赋能行业应用的全栈式解决方案。",
+          "不断完善在 AI、边缘算力、智能机器人等新兴领域的部署,公司研发投入 7.19 亿元,与上年同期基本持平。",
+          "发布基于高通高算力芯片的具身智能机器人开发平台 Fibot。广翼智联发布了基于高通处理器和基带芯片的卫星移动手持解决方案,推出两款采用高通处理器的智能边缘计算终端 FV01 和 FV04。"
+        ]
+      }
+    ]
+  },
+  "extraction_metadata": {
+    "model_version": "gemini-2.5-pro-preview-06-05",
+    "prompt_version": "1.0.0",
+    "extraction_timestamp": "2025-07-20T18:35:26.991850",
+    "processing_time_seconds": 60.94677519798279,
+    "token_usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0
+    },
+    "file_hash": "f1879d4deb1e9af6669b4b4ea245b7c1018f5579a8d5be4cc59e35f982e9735a"
+  },
+  "raw_llm_response": ""
+}

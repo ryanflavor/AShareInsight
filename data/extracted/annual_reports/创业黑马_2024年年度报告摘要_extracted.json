@@ -1,0 +1,306 @@
+{
+  "document_type": "annual_report",
+  "extraction_data": {
+    "company_name_full": "创业黑马科技集团股份有限公司",
+    "company_name_short": "创业黑马",
+    "company_code": "300688",
+    "exchange": "深圳证券交易所",
+    "top_shareholders": [
+      {
+        "name": "牛文文",
+        "holding_percentage": 15.14
+      },
+      {
+        "name": "蓝创文化传媒(天津)合伙企业(有限合伙)",
+        "holding_percentage": 6.35
+      },
+      {
+        "name": "王齐飞",
+        "holding_percentage": 5.05
+      },
+      {
+        "name": "天津嘉乐文化传媒交流中心(有限合伙)",
+        "holding_percentage": 3.26
+      },
+      {
+        "name": "崔子浩",
+        "holding_percentage": 1.62
+      },
+      {
+        "name": "王季文",
+        "holding_percentage": 1.44
+      },
+      {
+        "name": "崔风华",
+        "holding_percentage": 0.95
+      },
+      {
+        "name": "张玉霞",
+        "holding_percentage": 0.9
+      },
+      {
+        "name": "苗艺刚",
+        "holding_percentage": 0.87
+      },
+      {
+        "name": "王涛亚",
+        "holding_percentage": 0.7
+      }
+    ],
+    "business_concepts": [
+      {
+        "concept_name": "企业加速服务",
+        "concept_category": "核心业务",
+        "description": "针对企业创始人的战略管理咨询服务，是公司的核心产品体系。通过“黑马成长营”、“黑马实验室”等产品，在组织管理、商业模式、产品营销、资本策略等方面为中小企业及创业者提供成长支持。",
+        "importance_score": 0.8,
+        "development_stage": "成熟期",
+        "timeline": {
+          "established": null,
+          "recent_event": null
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": 3567.0
+        },
+        "relations": {
+          "customers": [
+            "中小创企业"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "公司产品以黑马加速体系为核心,围绕中小企业全生命周期成长所需的'认知、资源、资本'等核心发展要素,提供企业加速服务、企业服务、人工智能服务、AI 人才服务。",
+          "公司企业加速服务是针对企业创始人的战略管理咨询服务。其核心产品包含“黑马成长营”、“黑马实验室”等,让中小企业及创业者在组织管理、商业模式、产品营销、资本策略等方面得到帮助成长。",
+          "本年度...企业加速业务服务客户数量 3,567 个,较上年同期增长 17.72%。"
+        ]
+      },
+      {
+        "concept_name": "知识产权服务",
+        "concept_category": "核心业务",
+        "description": "为企业提供全生命周期的知识产权服务。该业务利用AI大数据提供IP智能监控、托管、风险检测等服务。报告期内，通过与现有SaaS平台集成并依托“天启大模型”进行智能化升级，从工具提供商向数据智能服务商转型。",
+        "importance_score": 0.7,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "报告期内，通过 API 接口与现有 SaaS 平台深度集成，形成 SaaS 与 MaaS 的融合升级。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "中小创企业"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "知识产权服务:顺应企业数字化发展浪潮,为企业提供全生命周期的知识产权服务。",
+          "该业务通过 AI 大数据在线查询企业工商、商标、专利、版权、政策数据,提供 IP 智能监控、IP 智能托管、IP 管家、IP 产业监控、智能风险检测等功能服务。",
+          "报告期内,公司通过 API 接口与现有 SaaS 平台深度集成,形成 SaaS 与 MaaS 的融合升级,依托“天启大模型”在保持原有软件服务的基础上增加了智能化服务..."
+        ]
+      },
+      {
+        "concept_name": "专精特新培育服务",
+        "concept_category": "核心业务",
+        "description": "顺应国家发展“专精特新”中小企业的政策，针对拟申报北交所上市或国家级专精特新“小巨人”潜力的企业，提供“中小企业攀峰计划”辅导。服务内容包括企业画像分析、资质评估、定制化升级路径规划及资本辅导。",
+        "importance_score": 0.7,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": null
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "拟申报北交所上市及具有申报国家级专精特新“小巨人”潜力的中小企业"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "专精特新培育服务:公司顺应国家经济发展专项政策——重点提出发展专精特新中小企业,并结合北京证券交易所定位...",
+          "...针对拟申报北交所上市及具有申报国家级专精特新“小巨人”潜力的中小企业, ...提供“中小企业攀峰计划”辅导。",
+          "通过企业画像分析与资质评估,提供定制化企业专精特新资质升级路径规划及资本辅导服务。"
+        ]
+      },
+      {
+        "concept_name": "产业加速服务",
+        "concept_category": "核心业务",
+        "description": "作为产业加速服务商，公司积极投身于商业航天、元宇宙、互联网3.0等战略性新兴产业服务。通过与地方政府等合作方建立产业加速器，形成产业集群，为特定领域的企业提供加速服务。",
+        "importance_score": 0.85,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": null
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": 70.0,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "战略性新兴产业企业"
+          ],
+          "partners": [
+            "北京市朝阳区政府"
+          ],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "截至本报告期末,公司已形成 70 余个产业加速器组成的“产业加速器集群”,涵盖商业航天、元宇宙数字人、互联网 3.0、具身智能等众多战略新兴产业。",
+          "朝阳黑马数字人加速器是由公司与北京市朝阳区政府合作开展的元宇宙数字人细人领域产业加速...",
+          "通州黑马数字孪生孵化器,依托北京城市副中心数十个应用场景,打造全国首个聚焦数字孪生领域高潜项目的孵化加速服务平台。"
+        ]
+      },
+      {
+        "concept_name": "科创大模型与智能体",
+        "concept_category": "新兴业务",
+        "description": "公司'All in AI'战略的核心，以自研的“天启科创大模型”为技术引擎，升级为“政企AI生态构建者”。面向政务端提供AI赋能平台建设，面向企业端推出智能体“政策通Agent”，帮助企业精准匹配政策、解决申报痛点。",
+        "importance_score": 0.95,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2024年与阿里达摩院、华为云、智谱华章等共建模型生态体系。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "政务端客户",
+            "企业用户"
+          ],
+          "partners": [
+            "阿里达摩院",
+            "华为云",
+            "火山引擎",
+            "智谱华章",
+            "中国移动",
+            "中国电信",
+            "厦门算能科技有限公司"
+          ],
+          "subsidiaries_or_investees": [
+            "北京黑马天启科技有限公司"
+          ]
+        },
+        "source_sentences": [
+          "以自主研发的“天启科创大模型”为技术引擎,推出覆盖企业全生命周期的数智化产品矩阵,解决中小创企业从认知到实践的转型需求。",
+          "黑马天启继续与阿里达摩院、华为云、火山引擎、智谱华章等共建模型生态体系,参与制定企服大模型行业标准,从传统创业服务商升级为“政企 AI 生态构建者”。",
+          "面向企业用户推出智能体“政策通 Agent”,帮助企业精准匹配政策,解决政策获取、项目申报及结果查询的痛点,提供政策精准匹配等一站式服务。"
+        ]
+      },
+      {
+        "concept_name": "AI人才服务",
+        "concept_category": "新兴业务",
+        "description": "通过子公司黑马数智旗下的“图灵学术”平台，为高端AI人才提供科研辅导服务。构建了“科研理论+项目实训+技能认证”三阶培养体系，并创新实施“导师合伙人制度”推动科研成果商业化。该业务是公司增长最快的板块之一。",
+        "importance_score": 0.9,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": null
+        },
+        "metrics": {
+          "revenue": 28054000.0,
+          "revenue_growth_rate": 2426.82,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": 500.0,
+          "sales_volume": 1000.0
+        },
+        "relations": {
+          "customers": [
+            "计算机及AI行业学生及研发人员"
+          ],
+          "partners": [
+            "阿里巴巴达摩院",
+            "华为云计算",
+            "联通产业互联网(山西)",
+            "东华软件",
+            "中公教育"
+          ],
+          "subsidiaries_or_investees": [
+            "黑马数智"
+          ]
+        },
+        "source_sentences": [
+          "公司旗下子公司黑马数智的“图灵学术”是专业的人工智能人才辅导培育平台...致力于为中国计算机及 AI 行业学生及研发人员等高端人才提供全方位的科研辅导服务。",
+          "2024年...其中人工智能培训业务收入增长较快,实现营业收入 2,805.40 万元,较上年同比增长 2426.82%。",
+          "“图灵学术”的 AI 人才辅导服务平台已辅导近 1000 位全球 AI 人才,聚合了近 500 位 AI 领域的科学家、专家学者。"
+        ]
+      },
+      {
+        "concept_name": "AI创新应用案例评估服务",
+        "concept_category": "战略布局",
+        "description": "在工信部工业文化发展中心指导下，面向中小企业推出的系统性支持计划。通过“AI应用伙伴计划”征集、评估和推广AI技术应用案例，为入选企业提供权威认证并利用媒体矩阵传播，旨在树立行业典范，加速产业智能化转型。",
+        "importance_score": 0.6,
+        "development_stage": "探索期",
+        "timeline": {
+          "established": null,
+          "recent_event": null
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "中小企业"
+          ],
+          "partners": [
+            "工业和信息化部工业文化发展中心"
+          ],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "在工业和信息化部工业文化发展中心指导下,面向中小企业推出的系统性支持计划,旨在通过筛选、评估与推广 AI 技术应用案例加速产业智能化转型。",
+          "该服务通过'AI 应用伙伴计划',精心征集并评估创新场景价值的优质案例,携手专家与投资人,从技术成熟度、商业价值等关键维度严格审核,为入选企业颁发权威认证...",
+          "定期发布《'AI 创新应用'案例》等标杆榜单,树立行业典范,有力推动千行百业迈向'人工智能+'转型,加速技术赋能与产业升级进程。"
+        ]
+      }
+    ]
+  },
+  "extraction_metadata": {
+    "model_version": "gemini-2.5-pro-preview-06-05",
+    "prompt_version": "1.0.0",
+    "extraction_timestamp": "2025-07-20T18:36:08.968836",
+    "processing_time_seconds": 102.92375111579895,
+    "token_usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0
+    },
+    "file_hash": "5c8d0b4fc6c1fa2e76b5dfdafa3b3e9b5233d20a81cdc25b91de3fe2840a1016"
+  },
+  "raw_llm_response": ""
+}

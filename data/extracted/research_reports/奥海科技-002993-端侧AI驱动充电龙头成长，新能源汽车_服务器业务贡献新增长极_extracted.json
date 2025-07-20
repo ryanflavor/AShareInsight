@@ -1,0 +1,206 @@
+{
+  "document_type": "research_report",
+  "extraction_data": {
+    "company_name_short": "奥海科技",
+    "company_code": "002993",
+    "report_title": "全球手机充电龙头，布局三大高成长领域持续成长",
+    "investment_rating": "买入",
+    "core_thesis": "公司作为全球手机充电器龙头，市占率领先，将受益于AI手机普及带来的充电功率升级和行业复苏。同时，公司通过“一三三”战略，成功布局新能源汽车电控、AI服务器电源等高增长新业务，打造了清晰的第二、三增长曲线，未来成长动力充足。",
+    "profit_forecast": [
+      {
+        "year": 2025,
+        "metric": "营业收入",
+        "value": "84.58亿元",
+        "yoy_growth": "31.68%"
+      },
+      {
+        "year": 2026,
+        "metric": "营业收入",
+        "value": "103.54亿元",
+        "yoy_growth": "22.42%"
+      },
+      {
+        "year": 2027,
+        "metric": "营业收入",
+        "value": "126.05亿元",
+        "yoy_growth": "21.74%"
+      },
+      {
+        "year": 2025,
+        "metric": "归母净利润",
+        "value": "6.32亿元",
+        "yoy_growth": "35.91%"
+      },
+      {
+        "year": 2026,
+        "metric": "归母净利润",
+        "value": "7.94亿元",
+        "yoy_growth": "25.63%"
+      },
+      {
+        "year": 2027,
+        "metric": "归母净利润",
+        "value": "9.90亿元",
+        "yoy_growth": "24.68%"
+      }
+    ],
+    "valuation": [],
+    "comparable_companies": [],
+    "risk_factors": [
+      "终端需求不及预期",
+      "数据中心竞争加剧风险",
+      "客户开拓不及预期"
+    ],
+    "business_concepts": [
+      {
+        "concept_name": "手机充电器及适配器",
+        "concept_category": "核心业务",
+        "description": "公司是全球手机充电器龙头，2023年全球市占率达17%。业务受益于AI应用推动的手机充电功率升级，2024年60W以上大功率充电器营收占比已达50%。同时，公司通过“AOHI”、“移速”等自主品牌建设，加速产品和业务升级。",
+        "importance_score": 0.9,
+        "development_stage": "成熟期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2024年，60W以上手机充电器营收占比达到50%。"
+        },
+        "metrics": {
+          "revenue": 4900000000.0,
+          "revenue_growth_rate": null,
+          "market_share": 17.0,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "从营收结构看，2024年充电器及适配器营收49亿，占比77%",
+          "奥海科技作为全球手机充电器龙头，2023年全球市占率17%，有望受益行业复苏。",
+          "2024年公司60W以上手机充电器营收占比已达到50%。同时公司加速打造“AOHI”“移速”等自主品牌，有望实现公司的产品和业务升级。"
+        ],
+        "key_products_or_brands": [
+          "AOHI",
+          "移速"
+        ]
+      },
+      {
+        "concept_name": "新能源汽车电控系统",
+        "concept_category": "新兴业务",
+        "description": "公司通过收购智新控制切入新能源汽车电控领域，核心产品包括整车控制器(VCU)、电机控制器(MCU)和电池管理系统(BMS)。该业务已进入成长期，客户涵盖东风、广汽、吉利等主流车企，并已进入双电控装机量前十名。",
+        "importance_score": 0.85,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2025年，公司进入双电控装机量TOP10。"
+        },
+        "metrics": {
+          "revenue": 553000000.0,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "东风集团",
+            "广汽集团",
+            "北汽福田",
+            "吉利汽车",
+            "一汽红旗"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": [
+            "智新控制"
+          ]
+        },
+        "source_sentences": [
+          "2024年...新能源电控5.53亿占比8.6%",
+          "公司通过收购智新控制战略性切入新能源汽车电控领域，主要产品包括VCU/MCU/BMS等...",
+          "主要客户包括东风集团、广汽集团、北汽福田、吉利汽车、一汽红旗等，2025年公司已经进入双电控装机量TOP10。"
+        ],
+        "key_products_or_brands": [
+          "VCU",
+          "MCU",
+          "BMS"
+        ]
+      },
+      {
+        "concept_name": "服务器电源",
+        "concept_category": "新兴业务",
+        "description": "作为数字能源业务的一部分，公司服务器电源产品受益于AI服务器需求的增长。公司已构建了覆盖550W至8000W的全场景解决方案，其大功率模块已成功导入头部AI服务器厂商，单机柜供电能力突破30KW。",
+        "importance_score": 0.75,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "大功率模块成功导入头部AI服务器厂商。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": 30.0,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "头部AI服务器厂商"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "数字电源板块，公司服务器电源产品有望受益于AI服务器需求持续高增...",
+          "当前公司构建了覆盖550-8000W功率段的服务器电源全场景方案，大功率模块成功导入头部AI服务器厂商...",
+          "单机柜供电能力突破30KW。"
+        ],
+        "key_products_or_brands": []
+      },
+      {
+        "concept_name": "光储充一体化解决方案",
+        "concept_category": "战略布局",
+        "description": "公司在数字能源领域，正积极构建“光储充一体化”产品矩阵，以进一步丰富产品线。该业务与服务器电源等共同构成公司的数字能源板块，是公司中长期发展的重要方向之一。",
+        "importance_score": 0.6,
+        "development_stage": "探索期",
+        "timeline": {
+          "established": null,
+          "recent_event": "构建“光储充一体化”产品矩阵以丰富产品线。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "2024年...储能等业务营收9.4亿，占比14.6%。",
+          "同时公司构建\"光储充一体化\"产品矩阵，进一步丰富公司产品线。"
+        ],
+        "key_products_or_brands": []
+      }
+    ]
+  },
+  "extraction_metadata": {
+    "model_version": "gemini-2.5-pro-preview-06-05",
+    "prompt_version": "1.0.0",
+    "extraction_timestamp": "2025-07-20T18:29:03.618514",
+    "processing_time_seconds": 60.99196767807007,
+    "token_usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0
+    },
+    "file_hash": "372266b6d72b1c6ae2140cd5af05ce866ebb424d3aacfdfb2b44d2067fdcb015"
+  },
+  "raw_llm_response": ""
+}

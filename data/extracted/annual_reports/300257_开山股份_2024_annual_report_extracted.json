@@ -1,0 +1,368 @@
+{
+  "document_type": "annual_report",
+  "extraction_data": {
+    "company_name_full": "开山集团股份有限公司",
+    "company_name_short": "开山股份",
+    "company_code": "300257",
+    "exchange": "深圳证券交易所",
+    "top_shareholders": [
+      {
+        "name": "开山控股集团股份有限公司",
+        "holding_percentage": 56.98
+      },
+      {
+        "name": "曹克坚",
+        "holding_percentage": 5.01
+      },
+      {
+        "name": "林垂楚",
+        "holding_percentage": 2.12
+      },
+      {
+        "name": "全国社保基金一一四组合",
+        "holding_percentage": 1.63
+      },
+      {
+        "name": "孙立平",
+        "holding_percentage": 1.59
+      },
+      {
+        "name": "周永祥",
+        "holding_percentage": 1.26
+      },
+      {
+        "name": "招商银行股份有限公司-东方红远见价值混合型证券投资基金",
+        "holding_percentage": 0.98
+      },
+      {
+        "name": "周奕晓",
+        "holding_percentage": 0.91
+      },
+      {
+        "name": "香港中央结算有限公司",
+        "holding_percentage": 0.71
+      },
+      {
+        "name": "开山集团股份有限公司-第一期员工持股计划",
+        "holding_percentage": 0.65
+      }
+    ],
+    "business_concepts": [
+      {
+        "concept_name": "地热新能源开发与设备",
+        "concept_category": "核心业务",
+        "description": "公司既是地热电站的开发商和运营商，也是核心设备供应商和EPC承包商。凭借独创的井口模块电站技术，公司能有效利用各类地热资源，缩短开发周期、降低投资强度。业务遍及印尼、美国、肯尼亚、匈牙利、土耳其等国，通过与电网公司签署长期购电协议获得稳定美元/欧元现金流。截至2024年底，运营或开发中的地热电力资产超430兆瓦。",
+        "importance_score": 0.95,
+        "development_stage": "成熟期",
+        "timeline": {
+          "established": "2019",
+          "recent_event": "2023年6月，肯尼亚Menengai地热项目成功并网发电。"
+        },
+        "metrics": {
+          "revenue": 125000000.0,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": 430.0,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "国家电力公司或公用事业公司",
+            "Peninsula Clean Energy",
+            "Marin Clean Energy",
+            "California Community Power",
+            "KPLC"
+          ],
+          "partners": [
+            "Sosian Menengai Geothermal Power Limited",
+            "Transmark",
+            "Symbion Power",
+            "KenGen"
+          ],
+          "subsidiaries_or_investees": [
+            "SMGP",
+            "SGI",
+            "Open Mountain Energy LLC (OME)",
+            "Turawell"
+          ]
+        },
+        "source_sentences": [
+          "开展地热新能源业务,公司同时扮演项目发起人(开发商)、独立运营商、地热井口模块电站成套设备供应商以及 EPC 承包商等多个角色,凭借独创的井口模块电站新技术和成套设备优势向上做产业链延伸。",
+          "至 2024 年底,公司运营或开发中的地热电力资产组合超 430 兆瓦,是迄今为止全世界成长最快的地热独立开发商。",
+          "公司是全球唯一能针对高压蒸汽、低压蒸汽、热水等各种不同地热资源类型“量体裁衣”定制最佳技术方案的制造商。"
+        ]
+      },
+      {
+        "concept_name": "工艺气体压缩机",
+        "concept_category": "核心业务",
+        "description": "公司利用自主研发的螺杆型线系统和一流的系统设计、制造体系，向石油、化工、制氢、冶金、碳捕集等多个领域提供大型工艺气体压缩机。产品可压缩氢气、天然气、二氧化碳等各类特殊介质。凭借技术优势，公司客户已拓展至宝武集团、中国石化、万华化学及巴斯夫、达涅利等国内外知名企业，并成功开发出大型热泵精馏用螺杆压缩机。",
+        "importance_score": 0.9,
+        "development_stage": "成熟期",
+        "timeline": {
+          "established": "2011",
+          "recent_event": null
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "宝武集团",
+            "中国石化",
+            "中化集团",
+            "中国石油",
+            "万华化学",
+            "河钢集团",
+            "德国瓦克集团",
+            "德国巴斯夫",
+            "意大利达涅利集团"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": [
+            "开山通用机械研究院",
+            "LMF"
+          ]
+        },
+        "source_sentences": [
+          "大型装备和机械制造向高技术含量、高附加值的工艺气体压缩机转型升级,非朝夕之功。",
+          "凭借其优异的性能目前开山工艺气体螺杆压缩机已经广泛应用到石油、天然气、炼油、化工、煤炭、制氢、冶金、发酵、有害气体治理、碳捕集、科学实验等多个领域。",
+          "客户“朋友圈”延伸至宝武集团、中国石化、中化集团、中国石油、万华化学、河钢集团、新疆广汇能源、新奥燃气、沃能化工、德国瓦克集团、德国巴斯夫、意大利达涅利集团、印尼塔塔集团等国内外知名品牌。"
+        ]
+      },
+      {
+        "concept_name": "离心式压缩机",
+        "concept_category": "核心业务",
+        "description": "公司离心式压缩机业务近年来取得爆发性成长，成为重要增长点。产品采用自主研发技术，主要对标进口品牌，实现国产化替代。产品包括离心式空气压缩机、工艺气压缩机、水蒸气压缩机等，广泛应用于空分、石化、冶金、光伏等市场，尤其在光伏行业的氩气回收工艺中，市场占有率超过60%。",
+        "importance_score": 0.85,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": "2011",
+          "recent_event": null
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": 60.0,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "某石化客户",
+            "某金属冶炼企业",
+            "某全球知名空分公司",
+            "国内光伏行业众多客户"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "最近的三年时间业务终于突破壁垒,取得了爆发性的成长,正在成为公司压缩机业务的重要增长点。",
+          "公司的离心式压缩机,完全采用自主研发技术,核心部件自主生产,主要对标进口品牌,实现国产化替代;",
+          "在光伏行业单晶硅生产的氩气回收工艺中,氩气离心式压缩机是最为核心的设备之一,开山在该领域已经实现了过百台套的销售,市场占有率超过 60%,得到国内光伏行业众多客户的认可,建立起了良好的口碑。"
+        ]
+      },
+      {
+        "concept_name": "氢能应用压缩机",
+        "concept_category": "战略布局",
+        "description": "公司成立氢能事业部，为“氢能经济”布局相关产品。产品涵盖往复式、螺杆式等多种技术类型，应用于制氢、储氢、氢冶金等领域。子公司LMF的无油高压往复氢压缩机技术领先，已成功应用于大型钢厂的变压吸附制氢系统，并为海外低碳冶金项目提供核心动力设备。公司还参与了全球首例氢冶金利用项目和国内富氢高炉脱碳项目。",
+        "importance_score": 0.8,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2023年,LMF的纯氢高压往复压缩机在国内大型钢铁公司的变压吸附制氢系统成功应用。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": 200000.0,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "大型钢铁公司",
+            "Puraglobe",
+            "达涅利集团",
+            "河钢集团张宣科技",
+            "宝武集团",
+            "法液空",
+            "林德集团",
+            "壳牌",
+            "三星"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": [
+            "LMF"
+          ]
+        },
+        "source_sentences": [
+          "为迎接“氢能经济”建设蕴藏的巨大商业机会,公司率先布局进行了相关的产品开发,成立了氢能事业部。",
+          "LMF 的氢气压缩机气缸采用无油设计,介质与润滑油完全隔开,不会对 99.999%氢气介质产生污染。",
+          "开山为此项目提供了关键核心动力设备:富氢气螺杆压缩机。该压缩机是国内单体流量最大的无油螺杆式压缩机,转子直径达 844mm。"
+        ]
+      },
+      {
+        "concept_name": "磁悬浮流体机械及真空泵",
+        "concept_category": "新兴业务",
+        "description": "公司通过重庆流体机械研究所与高校合作开发磁悬浮离心鼓风机、真空泵和空气压缩机等先进流体机械。磁悬浮技术消除了物理接触，实现了高效、低噪、长寿命和低维护。产品已广泛应用于污水曝气、制氧、造纸等行业。公司已完全自主掌握磁悬浮产品所有核心部件的研发制造工艺。同时，公司也开发了达到国际一流水平的变节距干式螺杆真空泵。",
+        "importance_score": 0.8,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": "2019",
+          "recent_event": "2023年成功研制磁悬浮空气压缩机。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "新材料、新能源汽车头部企业客户"
+          ],
+          "partners": [
+            "南京航空航天大学",
+            "西安交通大学能动学院"
+          ],
+          "subsidiaries_or_investees": [
+            "重庆开山流体机械研究所",
+            "重庆开山流体机械有限公司"
+          ]
+        },
+        "source_sentences": [
+          "相比之下,磁悬浮离心鼓风机利用磁悬浮技术使叶轮悬浮,不与任何固定部件发生物理接触,从而消除了对传统轴承的需求。",
+          "目前,公司已经完全自主掌握了磁悬浮轴承及控制、高速永磁电机、三元流叶轮等磁悬浮产品中所有核心部件的研发、制造工艺。",
+          "经国家真空设备质量检验检测中心检测,开山变节距干式螺杆真空泵技术性能指标已经达到国际一流水平。"
+        ]
+      },
+      {
+        "concept_name": "水蒸气压缩机与热泵",
+        "concept_category": "新兴业务",
+        "description": "公司是国内唯一同时掌握水蒸气螺杆与离心压缩机核心技术的厂商。该业务以全链条蒸汽管理技术为核心，为客户提供高能效蒸汽系统解决方案。热泵系统通过回收低品位余热产生高温蒸汽，替代传统燃煤锅炉，实现节能减排，投资回收期通常不超过2年。该业务受益于“双碳”政策，市场空间广阔。",
+        "importance_score": 0.75,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "计划于2024年推出可产生200℃以上高温的热泵产品。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": 50.0,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "生物基材料企业"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": []
+        },
+        "source_sentences": [
+          "作为国内唯一同时掌握水蒸气螺杆压缩机与水蒸气离心压缩机核心技术的厂商,公司以全链条蒸汽管理技术(制备、输送、回收再利用)为核心,为全球客户提供高能效、低排放的蒸汽系统解决方案。",
+          "技术原理:通过逆卡诺循环,以少量电能驱动冷媒压缩,将空气源、水源、蒸汽源的低品位余热转化为高温蒸汽或热介质(≥150℃),替代中小型燃煤锅炉,减少碳排放。",
+          "中国工业余热资源年利用潜力超 10 亿吨标煤,热泵替代市场空间超千亿级。"
+        ]
+      },
+      {
+        "concept_name": "干式无油螺杆空压机",
+        "concept_category": "核心业务",
+        "description": "公司自主研发的新一代干式无油螺杆空压机，效能可与欧美日一线品牌并驾齐驱。产品框架覆盖45-315KW，搭配节能变频技术。公司是业内唯一能提供水润滑、干式无油、离心及磁悬浮离心四种无油压缩技术的解决方案供应商。该产品已成功拓展至高端半导体、化学、粉体输送等供应链。",
+        "importance_score": 0.75,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2024年被视为该业务快速跳跃的里程碑。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": null,
+          "market_share": null,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "国内知名企业",
+            "高端半导体/化学/粉体输送供应链"
+          ],
+          "partners": [],
+          "subsidiaries_or_investees": [
+            "开山北美研发中心"
+          ]
+        },
+        "source_sentences": [
+          "开山自行研发的新一代无油螺杆式空压机快速的影响及渗透市场。不同于国内其他竞业品牌采用老式欧美抛弃技术的压缩主机模块,北美、中国、奥地利同时接手研发的无油螺杆有着业界的新一代设计,其效能与欧美日品牌并驾齐驱甚至部分型号效率超越了欧美日等一线品牌...",
+          "公司是业界唯一一个能将各种技术实现量产 并提供不同应用及需求客户做选择的解决方案供货商。",
+          "海外部分也成功拓展解决方案到高端半导体/化学/粉体输送供应链。"
+        ]
+      },
+      {
+        "concept_name": "管道气体吹扫移动压缩机",
+        "concept_category": "新兴业务",
+        "description": "子公司LMF为欧洲天然气管道网络提供的一种特殊类型压缩机，用于管道清洁和维护。该产品为全自动、自给自足的移动压缩机系统，能减少天然气排放、提高管道运营效率和安全性。在欧洲能源转型和碳排放管控趋严的背景下，该产品订单实现井喷式增长，客户主要为欧洲多国能源及天然气管道公用事业公司。",
+        "importance_score": 0.7,
+        "development_stage": "成长期",
+        "timeline": {
+          "established": null,
+          "recent_event": "2022年6月LMF举办了第二届移动气体压缩会议。"
+        },
+        "metrics": {
+          "revenue": null,
+          "revenue_growth_rate": 150.0,
+          "market_share": 90.0,
+          "gross_margin": null,
+          "capacity": null,
+          "sales_volume": null
+        },
+        "relations": {
+          "customers": [
+            "比利时、法国、德国、丹麦、西班牙等国能源及天然气管道公用事业公司"
+          ],
+          "partners": [
+            "Baker Hughes",
+            "E-Control",
+            "Open Grid Europe",
+            "Teréga"
+          ],
+          "subsidiaries_or_investees": [
+            "LMF"
+          ]
+        },
+        "source_sentences": [
+          "在此背景下,LMF 的管道气体吹扫移动压缩机订单井喷式增长,客户大多来自比利时、法国、德国、丹麦、西班牙等国能源及天然气管道公用事业公司。",
+          "管道气体吹扫移动压缩机是用于管道清洁和维护的特殊类型压缩机,它是全自动、自给自足的压缩机系统,能够自动化地完成天然气的排空任务...",
+          "目前,LMF 的 API 移动机市占率在欧洲超过 90%,并在积极推动其应用复苏,旨在成为市场驱动力量。"
+        ]
+      }
+    ]
+  },
+  "extraction_metadata": {
+    "model_version": "gemini-2.5-pro-preview-06-05",
+    "prompt_version": "1.0.0",
+    "extraction_timestamp": "2025-07-20T18:23:20.772507",
+    "processing_time_seconds": 112.606858253479,
+    "token_usage": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "total_tokens": 0
+    },
+    "file_hash": "2e2bde95895395dd8d686e2ddc25e9ee6e7229c135ef9e90d7a7478fbd774804"
+  },
+  "raw_llm_response": ""
+}
