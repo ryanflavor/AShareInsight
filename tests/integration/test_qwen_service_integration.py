@@ -2,7 +2,10 @@
 
 import asyncio
 import logging
+from decimal import Decimal
 from uuid import uuid4
+
+import pytest
 
 from src.application.ports.reranker_port import RerankRequest
 from src.domain.value_objects.document import Document
@@ -16,10 +19,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.asyncio
 async def test_qwen_service():
     """Test the Qwen Service integration."""
 
     # Create test documents
+    source_concept_id = uuid4()  # Common source concept
     test_documents = [
         Document(
             concept_id=uuid4(),
@@ -27,8 +32,9 @@ async def test_qwen_service():
             company_name="阿里巴巴集团",
             concept_name="电子商务平台",
             concept_category="科技",
-            importance_score=0.9,
+            importance_score=Decimal("0.9"),
             similarity_score=0.85,
+            source_concept_id=source_concept_id,
         ),
         Document(
             concept_id=uuid4(),
@@ -36,8 +42,9 @@ async def test_qwen_service():
             company_name="腾讯控股",
             concept_name="社交媒体平台",
             concept_category="科技",
-            importance_score=0.85,
+            importance_score=Decimal("0.85"),
             similarity_score=0.82,
+            source_concept_id=source_concept_id,
         ),
         Document(
             concept_id=uuid4(),
@@ -45,8 +52,9 @@ async def test_qwen_service():
             company_name="京东集团",
             concept_name="电商物流服务",
             concept_category="电商",
-            importance_score=0.8,
+            importance_score=Decimal("0.8"),
             similarity_score=0.80,
+            source_concept_id=source_concept_id,
         ),
         Document(
             concept_id=uuid4(),
@@ -54,8 +62,9 @@ async def test_qwen_service():
             company_name="美团",
             concept_name="本地生活服务",
             concept_category="服务",
-            importance_score=0.75,
+            importance_score=Decimal("0.75"),
             similarity_score=0.78,
+            source_concept_id=source_concept_id,
         ),
     ]
 

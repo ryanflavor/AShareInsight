@@ -8,6 +8,7 @@ import logging
 
 from src.application.ports import RerankerPort, VectorStorePort
 from src.application.ports.reranker_port import RerankRequest
+from src.domain.services import SimilarityCalculator
 from src.domain.value_objects import BusinessConceptQuery, Document
 from src.shared.exceptions import CompanyNotFoundError, SearchServiceError
 
@@ -34,6 +35,7 @@ class SearchSimilarCompaniesUseCase:
         """
         self._vector_store = vector_store
         self._reranker = reranker
+        self._similarity_calculator = SimilarityCalculator()
 
     async def execute(
         self,
@@ -81,6 +83,7 @@ class SearchSimilarCompaniesUseCase:
             )
 
             # Apply reranking if available and documents exist
+            rerank_scores = None
             if self._reranker and documents:
                 try:
                     logger.info(f"Applying reranking to {len(documents)} documents")
@@ -97,7 +100,13 @@ class SearchSimilarCompaniesUseCase:
                         rerank_request
                     )
 
-                    # Extract reranked documents
+                    # Build rerank scores mapping
+                    rerank_scores = {
+                        str(result.document.concept_id): result.rerank_score
+                        for result in rerank_response.results
+                    }
+
+                    # Update documents with reranked order
                     documents = [result.document for result in rerank_response.results]
 
                     logger.info(
@@ -110,9 +119,26 @@ class SearchSimilarCompaniesUseCase:
                     # Log error but continue with original results
                     # (graceful degradation)
                     logger.error(f"Reranking failed, using original order: {e}")
-                    # Keep original documents order
+                    # Keep original documents order and no rerank scores
 
-            return documents
+            # Apply final ranking algorithm
+            logger.info(
+                f"Applying similarity calculation to {len(documents)} documents"
+            )
+
+            scored_documents = self._similarity_calculator.calculate_final_scores(
+                documents=documents,
+                rerank_scores=rerank_scores,
+            )
+
+            # Extract sorted documents with final scores
+            final_documents = [scored.document for scored in scored_documents]
+
+            logger.info(
+                f"Final ranking completed, returning {len(final_documents)} documents"
+            )
+
+            return final_documents
 
         except CompanyNotFoundError:
             # Re-raise company not found errors

@@ -184,7 +184,7 @@ class QwenServiceAdapter(RerankerPort):
                             ) from e
 
                 # Parse response
-                result = await response.json()
+                result = response.json()
 
                 # Log response metadata without sensitive data
                 if logger.isEnabledFor(logging.DEBUG):

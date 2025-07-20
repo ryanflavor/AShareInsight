@@ -116,10 +116,11 @@ class TestRerankerIntegration:
 
         # Verify results
         assert len(results) == 5  # top_k=5
-        # Document at index 4 should be first (highest rerank score 0.95)
-        assert results[0].company_code == "000004"
-        # Document at index 1 should be second (rerank score 0.9)
-        assert results[1].company_code == "000001"
+        # Results are sorted by weighted score (0.7 * rerank + 0.3 * importance)
+        # Document 1: 0.7 * 0.90 + 0.3 * 0.75 = 0.855 (highest)
+        assert results[0].company_code == "000001"
+        # Document 4: 0.7 * 0.95 + 0.3 * 0.60 = 0.845 (second)
+        assert results[1].company_code == "000004"
 
         # Verify HTTP call was made
         assert mock_post.call_count >= 1

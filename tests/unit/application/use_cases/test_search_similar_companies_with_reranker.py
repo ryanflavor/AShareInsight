@@ -78,7 +78,10 @@ class TestSearchSimilarCompaniesWithReranker:
 
         # Verify
         assert len(results) == 3
-        assert results == sample_documents  # Original order maintained
+        # Results should be sorted by importance score (descending)
+        assert float(results[0].importance_score) == 0.9  # Company C
+        assert float(results[1].importance_score) == 0.8  # Company A
+        assert float(results[2].importance_score) == 0.7  # Company B
         mock_vector_store.search_similar_concepts.assert_called_once()
 
     @pytest.mark.asyncio
@@ -165,9 +168,12 @@ class TestSearchSimilarCompaniesWithReranker:
             similarity_threshold=0.7,
         )
 
-        # Verify original results are returned
+        # Verify results are sorted by importance score despite reranker failure
         assert len(results) == 3
-        assert results == sample_documents  # Original order maintained
+        # Results should be sorted by importance score (descending)
+        assert float(results[0].importance_score) == 0.9  # Company C
+        assert float(results[1].importance_score) == 0.8  # Company A
+        assert float(results[2].importance_score) == 0.7  # Company B
         mock_reranker.rerank_documents.assert_called_once()
 
     @pytest.mark.asyncio
