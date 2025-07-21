@@ -43,8 +43,9 @@ uv sync --dev
 3. Configure environment variables:
 ```bash
 cp .env.example .env
-# Edit .env and add:
-# GEMINI_API_KEY=sk-your-api-key-here
+# IMPORTANT: Edit .env with your actual API keys
+# NEVER commit .env to version control (already in .gitignore)
+# GEMINI_API_KEY=your_actual_api_key_here
 # GEMINI_BASE_URL=https://apius.tu-zi.com
 ```
 
