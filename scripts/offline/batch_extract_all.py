@@ -24,7 +24,7 @@ from rich.table import Table
 from structlog import get_logger
 
 # Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.application.use_cases.extract_document_data import ExtractDocumentDataUseCase
 from src.infrastructure.llm import GeminiLLMAdapter

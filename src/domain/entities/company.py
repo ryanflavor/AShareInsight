@@ -64,7 +64,7 @@ class BusinessConcept(BaseModel):
     metrics: Metrics | None = Field(None, description="业务指标")
     relations: Relations = Field(..., description="业务关系")
     source_sentences: list[str] = Field(
-        ..., min_length=1, max_length=3, description="原文引用句子(1-3句)"
+        ..., min_length=1, max_length=10, description="原文引用句子(1-10句)"
     )
 
 

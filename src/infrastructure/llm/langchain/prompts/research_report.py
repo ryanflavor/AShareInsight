@@ -17,14 +17,6 @@ class ResearchReportPromptV1(BasePrompt):
         """Create the research report extraction prompt template."""
         return """你是一位顶级的、专注于特定行业的证券分析师，你的任务是精读一份券商研报，并严格按照两步指令，提取公司的核心业务概念、以及分析师的观点和预测数据，并输出一个完整的JSON对象。
 
-# 输入信息
-
-* **文档类型**: "券商研报"
-* **文档内容**:
-    \"\"\"
-    {document_content}
-    \"\"\"
-
 # 提取指令
 
 ## 第一步：提取研报的独有分析与预测数据
@@ -104,7 +96,16 @@ class ResearchReportPromptV1(BasePrompt):
       "source_sentences": [ "...", "..." ]
     }}
   ]
-}}"""
+}}
+
+# 输入信息
+
+* **文档类型**: "券商研报"
+* **文档内容**:
+    \"\"\"
+    {document_content}
+    \"\"\"
+"""
 
     def get_input_variables(self) -> list[str]:
         """Get required input variables."""

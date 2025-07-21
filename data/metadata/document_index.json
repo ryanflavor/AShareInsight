@@ -118,9 +118,16 @@
       "document_type": "research_report",
       "extracted_path": "extracted/research_report/百润股份-002568-威士忌产品矩阵初成_extracted.json",
       "added_date": "2025-07-20T21:12:25.061561"
+    },
+    {
+      "document_id": "annual_report_江丰电子_2024年年度报告摘要",
+      "file_path": "data/annual_reports/2024/江丰电子_2024年年度报告摘要.md",
+      "document_type": "annual_report",
+      "extracted_path": "extracted/annual_report/江丰电子_2024年年度报告摘要_extracted.json",
+      "added_date": "2025-07-20T22:27:12.713363"
     }
   ],
-  "total_count": 17,
-  "last_updated": "2025-07-20T21:12:25.061567",
+  "total_count": 18,
+  "last_updated": "2025-07-20T22:27:12.713378",
   "schema_version": "1.0"
 }

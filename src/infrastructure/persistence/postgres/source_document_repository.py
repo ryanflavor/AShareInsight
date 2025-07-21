@@ -50,24 +50,181 @@ class PostgresSourceDocumentRepository(SourceDocumentRepositoryPort):
             OperationalError: If there's a database connection issue
         """
         try:
-            # Check if company exists, create if not
+            # Import DocumentType here to avoid circular imports
+            from src.domain.entities.extraction import DocumentType
+
+            # Check if company exists
             company_stmt = select(CompanyModel).where(
                 CompanyModel.company_code == document.company_code
             )
             result = await self.session.execute(company_stmt)
-            if not result.scalar_one_or_none():
-                # Create company record with minimal info
-                company = CompanyModel(
+            existing_company = result.scalar_one_or_none()
+
+            # Only create/update company for annual reports
+            if document.doc_type == DocumentType.ANNUAL_REPORT:
+                if not existing_company:
+                    # Create company record with minimal info
+                    # TODO: This should be handled by a separate Company service
+                    # For now, extract company name more intelligently
+                    company_name_full = f"Company {document.company_code}"
+
+                    if document.report_title:
+                        # Try to extract company name from report title
+                        # Remove common suffixes like "年年度报告", "研究报告", etc.
+                        import re
+
+                        cleaned_title = re.sub(
+                            r"\d{4}年.*报告.*$", "", document.report_title
+                        )
+                        cleaned_title = re.sub(r"\(\d+\)[^\(]*$", "", cleaned_title)
+                        cleaned_title = cleaned_title.strip()
+                        if cleaned_title:
+                            company_name_full = cleaned_title
+
+                    # Extract additional info from raw_llm_output if available
+                    company_name_short = f"待更新-{document.company_code}"
+                    exchange = None
+
+                    if document.raw_llm_output and isinstance(
+                        document.raw_llm_output, dict
+                    ):
+                        extraction_data = document.raw_llm_output.get(
+                            "extraction_data", {}
+                        )
+                        if extraction_data:
+                            # Get company names
+                            if extraction_data.get("company_name_full"):
+                                company_name_full = extraction_data["company_name_full"]
+                            if extraction_data.get("company_name_short"):
+                                company_name_short = extraction_data[
+                                    "company_name_short"
+                                ]
+                            # Get exchange
+                            exchange = extraction_data.get("exchange")
+
+                    company = CompanyModel(
+                        company_code=document.company_code,
+                        company_name_full=company_name_full,
+                        company_name_short=company_name_short,
+                        exchange=exchange,
+                    )
+                    self.session.add(company)
+                    await self.session.flush()
+
+                    logger.info(
+                        "company_created_from_annual_report",
+                        company_code=document.company_code,
+                        company_name=company_name_full,
+                    )
+                else:
+                    # Update existing company with better quality information
+                    update_needed = False
+                    updates_made = []
+
+                    if document.raw_llm_output and isinstance(
+                        document.raw_llm_output, dict
+                    ):
+                        extraction_data = document.raw_llm_output.get(
+                            "extraction_data", {}
+                        )
+                        if extraction_data:
+                            # Helper function to check if new data is better quality
+                            def is_better_quality(
+                                old_value: str | None, new_value: str | None
+                            ) -> bool:
+                                if not old_value:
+                                    return bool(new_value)
+                                if not new_value:
+                                    return False
+
+                                # Placeholder patterns that indicate low quality data
+                                placeholders = [
+                                    "待更新",
+                                    "Company ",
+                                    "未知",
+                                    "Unknown",
+                                    "TBD",
+                                    "N/A",
+                                ]
+
+                                # Old value is placeholder
+                                if any(ph in old_value for ph in placeholders):
+                                    return True
+
+                                # New value is longer and more specific
+                                # (likely more complete)
+                                if len(new_value) > len(old_value) * 1.5:
+                                    return True
+
+                                # New value contains more Chinese characters
+                                # (for Chinese companies)
+                                old_chinese = sum(
+                                    1 for c in old_value if "\u4e00" <= c <= "\u9fff"
+                                )
+                                new_chinese = sum(
+                                    1 for c in new_value if "\u4e00" <= c <= "\u9fff"
+                                )
+                                if (
+                                    new_chinese > old_chinese
+                                    and new_chinese > len(new_value) * 0.3
+                                ):
+                                    return True
+
+                                return False
+
+                            # Update exchange
+                            new_exchange = extraction_data.get("exchange")
+                            if is_better_quality(
+                                existing_company.exchange, new_exchange
+                            ):
+                                existing_company.exchange = new_exchange
+                                update_needed = True
+                                updates_made.append(f"exchange: {new_exchange}")
+
+                            # Update company short name
+                            new_short_name = extraction_data.get("company_name_short")
+                            if is_better_quality(
+                                existing_company.company_name_short, new_short_name
+                            ):
+                                existing_company.company_name_short = new_short_name
+                                update_needed = True
+                                updates_made.append(f"short_name: {new_short_name}")
+
+                            # Update company full name
+                            new_full_name = extraction_data.get("company_name_full")
+                            if is_better_quality(
+                                existing_company.company_name_full, new_full_name
+                            ):
+                                existing_company.company_name_full = new_full_name
+                                update_needed = True
+                                updates_made.append(f"full_name: {new_full_name}")
+
+                    if update_needed:
+                        await self.session.flush()
+                        logger.info(
+                            "company_updated_from_annual_report",
+                            company_code=document.company_code,
+                            updates=updates_made,
+                            old_values={
+                                "exchange": existing_company.exchange,
+                                "short_name": existing_company.company_name_short,
+                                "full_name": existing_company.company_name_full,
+                            },
+                        )
+            else:
+                # For research reports, company must already exist
+                if not existing_company:
+                    raise ValueError(
+                        f"Company {document.company_code} not found in database. "
+                        f"Research reports require existing company record. "
+                        f"Please process an annual report for this company first."
+                    )
+
+                logger.info(
+                    "research_report_using_existing_company",
                     company_code=document.company_code,
-                    company_name_full=(
-                        document.report_title.split("2024")[0].strip()
-                        if document.report_title
-                        else f"Company {document.company_code}"
-                    ),
-                    company_name_short=document.company_code,  # Use company code as short name for now
+                    doc_type=document.doc_type.value,
                 )
-                self.session.add(company)
-                await self.session.flush()
 
             # Create source document
             db_document = SourceDocumentModel.from_domain_entity(document)
@@ -218,6 +375,18 @@ class PostgresSourceDocumentRepository(SourceDocumentRepositoryPort):
             )
 
         return updated
+
+    async def get_all_file_hashes(self) -> set[str]:
+        """Get all file hashes from the database.
+
+        Returns:
+            Set of file hashes
+        """
+        stmt = select(SourceDocumentModel.file_hash).where(
+            SourceDocumentModel.file_hash.isnot(None)
+        )
+        result = await self.session.execute(stmt)
+        return {row[0] for row in result}
 
     async def get_statistics(self) -> dict[str, Any]:
         """Get repository statistics.

@@ -42,11 +42,14 @@ class LLMServicePort(ABC):
         pass
 
     @abstractmethod
-    def detect_document_type(self, content: str) -> DocumentType:
+    def detect_document_type(
+        self, content: str, file_path: str | None = None
+    ) -> DocumentType:
         """Detect the type of document from its content.
 
         Args:
             content: Document content to analyze.
+            file_path: Optional file path for additional context.
 
         Returns:
             Detected document type.

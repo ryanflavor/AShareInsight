@@ -107,8 +107,8 @@ class ArchiveExtractionResultUseCase:
                     file_hash=doc_metadata.file_hash,
                     company_code=doc_metadata.company_code,
                 )
-                assert existing is not None  # We already checked above
-                assert existing.doc_id is not None  # Existing docs should have IDs
+                if not existing or not existing.doc_id:
+                    raise ValueError("Invalid existing document state")
                 return existing.doc_id
 
             # Create SourceDocument entity
@@ -122,6 +122,15 @@ class ArchiveExtractionResultUseCase:
                 file_hash=doc_metadata.file_hash,
                 raw_llm_output=raw_llm_output,
                 extraction_metadata=self._build_extraction_metadata(raw_llm_output),
+                original_content=(
+                    getattr(doc_metadata, "original_content", None)
+                    if hasattr(doc_metadata, "original_content")
+                    else (
+                        metadata.get("original_content")
+                        if isinstance(metadata, dict)
+                        else None
+                    )
+                ),
                 processing_status="completed",
                 error_message=None,
                 created_at=None,  # Will be set by database
@@ -169,9 +178,11 @@ class ArchiveExtractionResultUseCase:
                 company_code=(
                     doc_metadata.company_code
                     if "doc_metadata" in locals()
-                    else metadata.get("company_code", "unknown")
-                    if isinstance(metadata, dict)
-                    else getattr(metadata, "company_code", "unknown")
+                    else (
+                        metadata.get("company_code", "unknown")
+                        if isinstance(metadata, dict)
+                        else getattr(metadata, "company_code", "unknown")
+                    )
                 ),
             )
             raise
@@ -183,12 +194,46 @@ class ArchiveExtractionResultUseCase:
                 company_code=(
                     doc_metadata.company_code
                     if "doc_metadata" in locals()
-                    else metadata.get("company_code", "unknown")
-                    if isinstance(metadata, dict)
-                    else getattr(metadata, "company_code", "unknown")
+                    else (
+                        metadata.get("company_code", "unknown")
+                        if isinstance(metadata, dict)
+                        else getattr(metadata, "company_code", "unknown")
+                    )
                 ),
             )
             raise
+        except ValueError as e:
+            # Check if it's a company not found error for research reports
+            if (
+                "not found in database" in str(e)
+                and "research report" in str(e).lower()
+            ):
+                logger.warning(
+                    "skipping_research_report_no_company",
+                    trace_id=trace_id,
+                    company_code=(
+                        doc_metadata.company_code
+                        if "doc_metadata" in locals()
+                        else (
+                            metadata.get("company_code", "unknown")
+                            if isinstance(metadata, dict)
+                            else getattr(metadata, "company_code", "unknown")
+                        )
+                    ),
+                    reason=(
+                        "Company not found in database, "
+                        "skipping research report archival"
+                    ),
+                )
+                # Return a special UUID to indicate skipped
+                from uuid import uuid4
+
+                return (
+                    uuid4()
+                )  # Return a dummy UUID to indicate success without archiving
+            else:
+                # Re-raise other ValueError exceptions
+                raise
         except Exception as e:
             logger.error(
                 "archive_unexpected_error",
@@ -198,9 +243,11 @@ class ArchiveExtractionResultUseCase:
                 company_code=(
                     doc_metadata.company_code
                     if "doc_metadata" in locals()
-                    else metadata.get("company_code", "unknown")
-                    if isinstance(metadata, dict)
-                    else getattr(metadata, "company_code", "unknown")
+                    else (
+                        metadata.get("company_code", "unknown")
+                        if isinstance(metadata, dict)
+                        else getattr(metadata, "company_code", "unknown")
+                    )
                 ),
             )
             raise
@@ -266,7 +313,10 @@ class ArchiveExtractionResultUseCase:
 
         doc_date = metadata["doc_date"]
         if isinstance(doc_date, str):
-            doc_date = date.fromisoformat(doc_date)
+            try:
+                doc_date = date.fromisoformat(doc_date)
+            except ValueError as e:
+                raise ValueError(f"Invalid date format: {doc_date}") from e
         elif not isinstance(doc_date, date):
             raise ValueError(f"Invalid doc_date type: {type(doc_date)}")
 

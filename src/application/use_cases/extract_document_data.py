@@ -114,7 +114,7 @@ class ExtractDocumentDataUseCase:
             if document_type_override:
                 doc_type = DocumentType(document_type_override)
             else:
-                doc_type = self._detect_document_type(document.content)
+                doc_type = self._detect_document_type(document.content, str(file_path))
 
             # Step 3: Extract data with LLM
             self.state.update(
@@ -144,10 +144,22 @@ class ExtractDocumentDataUseCase:
                 )
 
                 try:
-                    await self.archive_use_case.execute(
+                    archive_result = await self.archive_use_case.execute(
                         raw_llm_output=raw_llm_output,
                         metadata=archive_metadata,
                     )
+                    import structlog
+
+                    logger = structlog.get_logger(__name__)
+
+                    # Check if it was skipped (indicated by the warning log)
+                    if "skipping_research_report_no_company" in str(archive_result):
+                        logger.info(
+                            "archiving_skipped_no_company",
+                            company_code=company_info.get("company_code"),
+                            doc_type=doc_type.value,
+                            reason="Company not found, research report extraction continues without archiving",
+                        )
                 except Exception as e:
                     # Log error but don't fail the extraction
                     import structlog
@@ -195,9 +207,9 @@ class ExtractDocumentDataUseCase:
         except Exception as e:
             raise DocumentProcessingError(f"Failed to load document: {str(e)}")
 
-    def _detect_document_type(self, content: str) -> DocumentType:
+    def _detect_document_type(self, content: str, file_path: str) -> DocumentType:
         """Detect document type from content."""
-        return self.llm_service.detect_document_type(content)
+        return self.llm_service.detect_document_type(content, file_path)
 
     async def _extract_data(
         self, doc_type: DocumentType, content: str, company_info: dict[str, str]
@@ -285,10 +297,11 @@ class ExtractDocumentDataUseCase:
             Dictionary representing the raw LLM output
         """
         # Convert entities to dict for archiving
+        # Use model_dump with mode='json' to handle datetime serialization
         raw_output = {
             "document_type": doc_type.value,
-            "extraction_data": extraction_data.model_dump(),
-            "extraction_metadata": extraction_metadata.model_dump(),
+            "extraction_data": extraction_data.model_dump(mode="json"),
+            "extraction_metadata": extraction_metadata.model_dump(mode="json"),
             "status": "success",
             "timestamp": extraction_metadata.extraction_timestamp.isoformat(),
         }

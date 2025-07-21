@@ -17,15 +17,6 @@ class AnnualReportPromptV1(BasePrompt):
         """Create the annual report extraction prompt template."""
         return """你是一位严谨、细致的数据提取专家，你的任务是全面解析一份上市公司年度报告摘要，并严格按照两步指令，提取公司元数据和业务概念信息，最终输出一个完整的、结构化的JSON对象。
 
-# 输入信息
-
-* **公司名称**: "{company_name}"
-* **文档类型**: "{document_type}"
-* **文档内容**:
-    \"\"\"
-    {document_content}
-    \"\"\"
-
 # 提取指令
 
 ## 第一步：提取公司级元数据
@@ -100,7 +91,17 @@ class AnnualReportPromptV1(BasePrompt):
       ]
     }}
   ]
-}}"""
+}}
+
+# 输入信息
+
+* **公司名称**: "{company_name}"
+* **文档类型**: "{document_type}"
+* **文档内容**:
+    \"\"\"
+    {document_content}
+    \"\"\"
+"""
 
     def get_input_variables(self) -> list[str]:
         """Get required input variables."""

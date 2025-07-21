@@ -589,13 +589,31 @@
           "error": null
         }
       ]
+    },
+    {
+      "session_id": "20250720_222611",
+      "start_time": "2025-07-20T22:26:30.682945",
+      "total_documents": 1,
+      "processed": 1,
+      "successful": 1,
+      "failed": 0,
+      "documents": [
+        {
+          "file_path": "data/annual_reports/2024/江丰电子_2024年年度报告摘要.md",
+          "document_type": "annual_report",
+          "success": true,
+          "processing_time": 41.333994,
+          "timestamp": "2025-07-20T22:27:12.713333",
+          "error": null
+        }
+      ]
     }
   ],
   "statistics": {
-    "total_processed": 50,
-    "successful": 17,
+    "total_processed": 51,
+    "successful": 18,
     "failed": 33,
     "pending": 0
   },
-  "last_updated": "2025-07-20T21:12:25.068363"
+  "last_updated": "2025-07-20T22:27:12.714397"
 }

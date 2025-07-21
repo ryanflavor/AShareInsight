@@ -18,7 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
 Base: Any = declarative_base()
@@ -66,6 +66,7 @@ class SourceDocumentModel(Base):
     file_hash = Column(String(64), nullable=True)
     raw_llm_output = Column(JSONB, nullable=False)
     extraction_metadata = Column(JSONB, nullable=True)
+    original_content = Column(Text, nullable=True)
     processing_status = Column(String(20), server_default="completed", nullable=True)
     error_message = Column(Text, nullable=True)
     created_at = Column(
@@ -102,6 +103,7 @@ class SourceDocumentModel(Base):
             file_hash=self.file_hash,
             raw_llm_output=self.raw_llm_output,
             extraction_metadata=self.extraction_metadata,
+            original_content=self.original_content,
             processing_status=self.processing_status,
             error_message=self.error_message,
             created_at=self.created_at,
@@ -127,6 +129,7 @@ class SourceDocumentModel(Base):
             file_hash=entity.file_hash,
             raw_llm_output=entity.raw_llm_output,
             extraction_metadata=entity.extraction_metadata,
+            original_content=entity.original_content,
             processing_status=entity.processing_status,
             error_message=entity.error_message,
             created_at=entity.created_at,

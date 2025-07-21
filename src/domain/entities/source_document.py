@@ -8,7 +8,7 @@ from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from .extraction import DocumentType as DocType
 
@@ -69,6 +69,10 @@ class SourceDocument(BaseModel):
             }
         ],
     )
+    original_content: str | None = Field(
+        None,
+        description="Original document content (markdown or text)",
+    )
     processing_status: str = Field(
         "completed",
         max_length=20,
@@ -110,13 +114,22 @@ class SourceDocument(BaseModel):
             raise ValueError("raw_llm_output cannot be empty")
         return v
 
-    model_config = {
-        "json_encoders": {
-            UUID: str,
-            datetime: lambda v: v.isoformat() if v else None,
-            date: lambda v: v.isoformat() if v else None,
-        }
-    }
+    model_config = ConfigDict()
+
+    @field_serializer("doc_id")
+    def serialize_doc_id(self, value: UUID | None) -> str | None:
+        """Serialize UUID to string."""
+        return str(value) if value else None
+
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime | None) -> str | None:
+        """Serialize datetime to ISO format string."""
+        return value.isoformat() if value else None
+
+    @field_serializer("doc_date")
+    def serialize_doc_date(self, value: date | None) -> str | None:
+        """Serialize date to ISO format string."""
+        return value.isoformat() if value else None
 
 
 class SourceDocumentMetadata(BaseModel):
@@ -128,6 +141,7 @@ class SourceDocumentMetadata(BaseModel):
     report_title: str | None = Field(None, description="Report title")
     file_path: str | None = Field(None, description="File path")
     file_hash: str | None = Field(None, max_length=64, description="File SHA-256 hash")
+    original_content: str | None = Field(None, description="Original document content")
 
     @classmethod
     def from_extraction_result(
@@ -151,7 +165,9 @@ class SourceDocumentMetadata(BaseModel):
         doc_date_str = document_metadata.get("doc_date", "")
 
         if document_type == "annual_report":
-            report_title = f"{company_name}2024年年度报告"
+            # Extract year from doc_date
+            year = doc_date_str[:4] if doc_date_str else date.today().year
+            report_title = f"{company_name}{year}年年度报告"
         else:
             report_title = document_metadata.get(
                 "report_title", f"{company_name}研究报告"

@@ -355,19 +355,35 @@ class GeminiLLMAdapter(LLMServicePort):
             "research_report_prompt_version": self.research_report_prompt.get_version(),
         }
 
-    def detect_document_type(self, content: str) -> DocumentType:
-        """Detect the type of document from its content.
+    def detect_document_type(
+        self, content: str, file_path: str | None = None
+    ) -> DocumentType:
+        """Detect the type of document from its content and file path.
 
         Args:
             content: Document content to analyze.
+            file_path: Optional file path for additional context.
 
         Returns:
             Detected document type ('annual_report' or 'research_report').
         """
-        # Simple heuristic-based detection
+        # First check file path if available (most reliable)
+        if file_path:
+            file_path_lower = file_path.lower()
+            if any(
+                indicator in file_path_lower
+                for indicator in ["research_report", "研究报告", "研报"]
+            ):
+                return DocumentType.RESEARCH_REPORT
+            elif any(
+                indicator in file_path_lower
+                for indicator in ["annual_report", "年度报告", "年报"]
+            ):
+                return DocumentType.ANNUAL_REPORT
+
         content_lower = content.lower()
 
-        # Keywords for annual reports
+        # Keywords for annual reports (more comprehensive)
         annual_keywords = [
             "年度报告",
             "年报",
@@ -376,9 +392,15 @@ class GeminiLLMAdapter(LLMServicePort):
             "审计报告",
             "股东大会",
             "董事会报告",
+            "第一节 重要提示",
+            "第二节 公司基本情况",
+            "会计师事务所",
+            "审计意见",
+            "经营情况讨论与分析",
+            "公司治理",
         ]
 
-        # Keywords for research reports
+        # Keywords for research reports (more comprehensive)
         research_keywords = [
             "投资评级",
             "买入",
@@ -390,17 +412,44 @@ class GeminiLLMAdapter(LLMServicePort):
             "研究报告",
             "分析师",
             "证券研究",
+            "推荐",
+            "评级",
+            "调研",
+            "点评",
+            "研报",
+            "投资建议",
+            "风险提示",
+            "盈利预测",
         ]
 
-        # Count keyword occurrences
-        annual_score = sum(1 for keyword in annual_keywords if keyword in content_lower)
-        research_score = sum(
+        # Weighted scoring - some keywords are more definitive
+        annual_score = 0
+        research_score = 0
+
+        # High-weight annual report indicators
+        if any(kw in content_lower for kw in ["年度报告", "annual report", "审计报告"]):
+            annual_score += 3
+        if "第一节" in content_lower and "第二节" in content_lower:
+            annual_score += 3
+
+        # High-weight research report indicators
+        if any(
+            kw in content_lower for kw in ["投资评级", "目标价", "买入评级", "推荐评级"]
+        ):
+            research_score += 3
+        if "事件：" in content_lower or "点评：" in content_lower:
+            research_score += 2
+
+        # Regular keyword counting
+        annual_score += sum(
+            1 for keyword in annual_keywords if keyword in content_lower
+        )
+        research_score += sum(
             1 for keyword in research_keywords if keyword in content_lower
         )
 
-        # Default to annual report if unclear
-        return (
-            DocumentType.RESEARCH_REPORT
-            if research_score > annual_score
-            else DocumentType.ANNUAL_REPORT
-        )
+        # Research reports need higher confidence to override default
+        if research_score > annual_score * 1.2:  # 20% higher threshold
+            return DocumentType.RESEARCH_REPORT
+        else:
+            return DocumentType.ANNUAL_REPORT
