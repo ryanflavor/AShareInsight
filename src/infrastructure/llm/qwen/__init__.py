@@ -1,5 +1,5 @@
 """Qwen model adapters."""
 
-from .qwen_service_adapter import QwenServiceAdapter, QwenServiceConfig
+from .qwen_rerank_adapter import QwenRerankAdapter, QwenRerankConfig
 
-__all__ = ["QwenServiceAdapter", "QwenServiceConfig"]
+__all__ = ["QwenRerankAdapter", "QwenRerankConfig"]
