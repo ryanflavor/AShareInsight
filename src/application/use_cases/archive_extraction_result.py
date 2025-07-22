@@ -11,6 +11,7 @@ from typing import Any
 from uuid import UUID
 
 import structlog
+from opentelemetry import trace
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from src.application.ports.source_document_repository import (
@@ -62,7 +63,12 @@ class ArchiveExtractionResultUseCase:
 
         start_time = time.time()
 
-        trace_id = "unknown"  # TODO: Get from context when properly configured
+        # Get trace ID from current OpenTelemetry span
+        current_span = trace.get_current_span()
+        if current_span.is_recording():
+            trace_id = format(current_span.get_span_context().trace_id, "032x")
+        else:
+            trace_id = "no_active_trace"
 
         logger.info(
             "archiving_extraction_result",

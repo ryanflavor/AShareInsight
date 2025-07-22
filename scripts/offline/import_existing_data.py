@@ -9,7 +9,9 @@ into the source_documents table without re-running LLM extraction.
 import asyncio
 import hashlib
 import json
+import re
 import sys
+from datetime import date
 from pathlib import Path
 
 # Add project root to Python path
@@ -26,6 +28,44 @@ from src.infrastructure.persistence.postgres.source_document_repository import (
 )
 
 logger = structlog.get_logger(__name__)
+
+
+def extract_year_from_filename(filename: str) -> str:
+    """Extract year from filename, defaulting to current year if not found.
+
+    Args:
+        filename: The filename to extract year from
+
+    Returns:
+        Year as string (e.g. "2024")
+    """
+    # Try to find 4-digit year patterns that look like actual years
+    # Look for years in common patterns: _2024_, 2024年, 20240115
+    year_patterns = [
+        r"_(\d{4})_",  # _2024_
+        r"(\d{4})年",  # 2024年
+        r"(\d{4})(?:\d{4})",  # 20240115 (year + date)
+        r"[^0-9](\d{4})[^0-9]",  # any 4-digit year surrounded by non-digits
+    ]
+
+    for pattern in year_patterns:
+        year_match = re.search(pattern, filename)
+        if year_match:
+            year = year_match.group(1)
+            # Validate year is reasonable (between 2020 and current year + 1)
+            current_year = date.today().year
+            if 2020 <= int(year) <= current_year + 1:
+                return year
+
+    # Fallback: try any 4-digit number that could be a year
+    all_years = re.findall(r"(\d{4})", filename)
+    for year in all_years:
+        current_year = date.today().year
+        if 2020 <= int(year) <= current_year + 1:
+            return year
+
+    # Default to current year if no valid year found
+    return str(date.today().year)
 
 
 async def import_extracted_file(
@@ -52,12 +92,17 @@ async def import_extracted_file(
         extraction_data = extracted_data.get("extraction_data", {})
 
         # Determine source file based on naming pattern
+        # Extract year from filename dynamically
+        year = extract_year_from_filename(file_path.name)
+
         if doc_type == "annual_report":
             source_pattern = file_path.stem.replace("_extracted", "")
-            source_file = Path("data/annual_reports/2024") / f"{source_pattern}.md"
+            source_file = Path(f"data/annual_reports/{year}") / f"{source_pattern}.md"
         else:
             source_pattern = file_path.stem.replace("_extracted", "")
-            source_file = Path("data/research_reports/2024") / f"{source_pattern}.txt"
+            source_file = (
+                Path(f"data/research_reports/{year}") / f"{source_pattern}.txt"
+            )
 
         # Build metadata for archiving
         # For research reports, use report_title if available
@@ -68,13 +113,16 @@ async def import_extracted_file(
             )
         else:
             report_title = (
-                extraction_data.get("company_name_full", "Unknown") + "2024年年度报告"
+                extraction_data.get("company_name_full", "Unknown")
+                + f"{year}年年度报告"
             )
 
         metadata = {
             "company_code": extraction_data.get("company_code", "000000"),
             "doc_type": doc_type,
-            "doc_date": "2024-12-31" if doc_type == "annual_report" else "2024-01-01",
+            "doc_date": f"{year}-12-31"
+            if doc_type == "annual_report"
+            else f"{year}-01-01",
             "report_title": report_title,
             "file_path": str(source_file),
             "file_hash": hashlib.sha256(
