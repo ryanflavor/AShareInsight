@@ -11,6 +11,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.shared.config.settings import get_settings
+
 
 class BusinessConceptMaster(BaseModel):
     """Business concept master entity representing authoritative business data.
@@ -37,7 +39,8 @@ class BusinessConceptMaster(BaseModel):
     @classmethod
     def validate_concept_category(cls, v: str) -> str:
         """Validate that concept category is one of allowed values."""
-        allowed_categories = {"核心业务", "新兴业务", "战略布局"}
+        settings = get_settings()
+        allowed_categories = settings.fusion.concept_categories_set
         if v not in allowed_categories:
             raise ValueError(
                 f"concept_category must be one of {allowed_categories}, got {v}"
@@ -143,8 +146,10 @@ class BusinessConceptMaster(BaseModel):
         for sentence in current_sentences + new_sentences:
             merged[sentence] = None
 
-        # Keep only first 20 sentences
-        self.concept_details["source_sentences"] = list(merged.keys())[:20]
+        # Keep only configured max sentences
+        settings = get_settings()
+        max_sentences = settings.fusion.max_source_sentences
+        self.concept_details["source_sentences"] = list(merged.keys())[:max_sentences]
 
     model_config = {
         "json_encoders": {UUID: str, datetime: lambda v: v.isoformat(), Decimal: str}

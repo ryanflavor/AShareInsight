@@ -101,6 +101,33 @@ class MonitoringSettings(BaseSettings):
     )
 
 
+class FusionSettings(BaseSettings):
+    """Data fusion-specific settings."""
+
+    # Batch processing
+    fusion_batch_size: int = 50  # Number of concepts to process per batch
+    fusion_batch_delay_seconds: float = 0.1  # Delay between batches
+
+    # Retry logic
+    fusion_max_retries: int = 3  # Max retries for optimistic lock conflicts
+    fusion_retry_base_delay: float = 0.1  # Base delay for retry backoff
+
+    # Business concept limits
+    max_source_sentences: int = 20  # Maximum source sentences to keep
+
+    # Business concept categories (comma-separated)
+    allowed_concept_categories: str = "核心业务,新兴业务,战略布局"
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
+    )
+
+    @property
+    def concept_categories_set(self) -> set[str]:
+        """Get allowed concept categories as a set."""
+        return {cat.strip() for cat in self.allowed_concept_categories.split(",")}
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -114,6 +141,7 @@ class Settings(BaseSettings):
     qwen_embedding: QwenEmbeddingSettings = QwenEmbeddingSettings()
     database: DatabaseSettings = DatabaseSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
+    fusion: FusionSettings = FusionSettings()
 
     # Feature flags
     debug_mode: bool = False

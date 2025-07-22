@@ -22,6 +22,7 @@ from src.domain.entities.company import BusinessConcept
 from src.domain.services.data_fusion_service import DataFusionService
 from src.domain.services.vectorization_service import VectorizationService
 from src.infrastructure.monitoring.fusion_metrics import FusionMetrics
+from src.shared.config.settings import get_settings
 from src.shared.exceptions.business_exceptions import OptimisticLockError
 
 logger = structlog.get_logger(__name__)
@@ -37,7 +38,7 @@ class UpdateMasterDataUseCase:
         data_fusion_service: DataFusionService,
         embedding_service: EmbeddingServicePort | None = None,
         vectorization_service: VectorizationService | None = None,
-        batch_size: int = 50,
+        batch_size: int | None = None,
         enable_async_vectorization: bool = True,
     ):
         """Initialize the use case with dependencies.
@@ -56,7 +57,13 @@ class UpdateMasterDataUseCase:
         self.data_fusion_service = data_fusion_service
         self.embedding_service = embedding_service
         self.vectorization_service = vectorization_service
-        self.batch_size = batch_size
+
+        # Load settings
+        settings = get_settings()
+        self.batch_size = batch_size or settings.fusion.fusion_batch_size
+        self.batch_delay = settings.fusion.fusion_batch_delay_seconds
+        self.max_retries = settings.fusion.fusion_max_retries
+        self.retry_base_delay = settings.fusion.fusion_retry_base_delay
         self.enable_async_vectorization = enable_async_vectorization
 
         # Create vector index use case if services are provided
@@ -134,7 +141,7 @@ class UpdateMasterDataUseCase:
 
                 # Small delay between batches to prevent resource exhaustion
                 if i + self.batch_size < len(business_concepts):
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(self.batch_delay)
 
             # Get final statistics
             stats = context.get_summary()
@@ -277,8 +284,7 @@ class UpdateMasterDataUseCase:
 
         if existing:
             # Update existing concept with retry for optimistic lock conflicts
-            max_retries = 3
-            for attempt in range(max_retries):
+            for attempt in range(self.max_retries):
                 try:
                     # Merge the data
                     updated = self.data_fusion_service.merge_business_concepts(
@@ -295,7 +301,7 @@ class UpdateMasterDataUseCase:
                     return "updated"
 
                 except OptimisticLockError:
-                    if attempt == max_retries - 1:
+                    if attempt == self.max_retries - 1:
                         raise
 
                     # Record retry
@@ -304,7 +310,7 @@ class UpdateMasterDataUseCase:
                     )
 
                     # Refresh the entity and retry
-                    await asyncio.sleep(0.1 * (attempt + 1))
+                    await asyncio.sleep(self.retry_base_delay * (attempt + 1))
                     existing = (
                         await self.business_concept_repo.find_by_company_and_name(
                             company_code, concept.concept_name
