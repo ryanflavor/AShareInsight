@@ -8,8 +8,17 @@ import logging
 
 from src.application.ports import RerankerPort, VectorStorePort
 from src.application.ports.reranker_port import RerankRequest
-from src.domain.services import SimilarityCalculator
-from src.domain.value_objects import BusinessConceptQuery, Document
+from src.domain.services import (
+    AggregatedCompany,
+    CompanyAggregator,
+    MarketDataRepository,
+    MarketFilter,
+    SimilarityCalculator,
+)
+from src.domain.services import (
+    MarketFilters as DomainMarketFilters,
+)
+from src.domain.value_objects import BusinessConceptQuery
 from src.shared.exceptions import CompanyNotFoundError, SearchServiceError
 
 logger = logging.getLogger(__name__)
@@ -25,17 +34,25 @@ class SearchSimilarCompaniesUseCase:
     """
 
     def __init__(
-        self, vector_store: VectorStorePort, reranker: RerankerPort | None = None
+        self,
+        vector_store: VectorStorePort,
+        reranker: RerankerPort | None = None,
+        market_data_repository: MarketDataRepository | None = None,
     ):
         """Initialize the use case with required dependencies.
 
         Args:
             vector_store: Port interface for vector store operations
             reranker: Optional port interface for document reranking
+            market_data_repository: Optional repository for market data
         """
         self._vector_store = vector_store
         self._reranker = reranker
         self._similarity_calculator = SimilarityCalculator()
+        self._company_aggregator = CompanyAggregator()
+        self._market_filter = (
+            MarketFilter(market_data_repository) if market_data_repository else None
+        )
 
     async def execute(
         self,
@@ -43,7 +60,8 @@ class SearchSimilarCompaniesUseCase:
         text_to_embed: str | None = None,
         top_k: int = 50,
         similarity_threshold: float = 0.7,
-    ) -> list[Document]:
+        market_filters: DomainMarketFilters | None = None,
+    ) -> tuple[list[AggregatedCompany], dict[str, bool]]:
         """Execute the similar companies search.
 
         Args:
@@ -53,7 +71,7 @@ class SearchSimilarCompaniesUseCase:
             similarity_threshold: Minimum similarity score (0.0-1.0)
 
         Returns:
-            List of Document objects representing similar companies
+            Tuple of (List of AggregatedCompany objects, filters applied dict)
 
         Raises:
             CompanyNotFoundError: If target company cannot be found
@@ -134,11 +152,44 @@ class SearchSimilarCompaniesUseCase:
             # Extract sorted documents with final scores
             final_documents = [scored.document for scored in scored_documents]
 
-            logger.info(
-                f"Final ranking completed, returning {len(final_documents)} documents"
+            logger.info(f"Final ranking completed, {len(final_documents)} documents")
+
+            # Aggregate documents by company
+            logger.info("Aggregating documents by company")
+            aggregated_companies = self._company_aggregator.aggregate_by_company(
+                documents=final_documents,
+                strategy="max",  # Use highest concept score as company score
             )
 
-            return final_documents
+            logger.info(
+                f"Aggregated {len(final_documents)} documents into "
+                f"{len(aggregated_companies)} companies"
+            )
+
+            # Apply market filters if provided
+            filters_applied = {"market_cap_filter": False, "volume_filter": False}
+
+            if self._market_filter and market_filters and not market_filters.is_empty():
+                logger.info("Applying market filters")
+                filter_result = await self._market_filter.apply_filters(
+                    companies=aggregated_companies,
+                    filters=market_filters,
+                )
+                aggregated_companies = filter_result.filtered_companies
+                filters_applied = filter_result.filters_applied
+
+                logger.info(
+                    f"Market filters reduced companies from "
+                    f"{filter_result.total_before_filter} to "
+                    f"{len(aggregated_companies)}"
+                )
+
+            # Apply top_k limit after filtering
+            if len(aggregated_companies) > top_k:
+                aggregated_companies = aggregated_companies[:top_k]
+                logger.info(f"Limited results to top {top_k} companies")
+
+            return aggregated_companies, filters_applied
 
         except CompanyNotFoundError:
             # Re-raise company not found errors

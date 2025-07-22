@@ -11,6 +11,7 @@ from fastapi import Depends
 
 from src.application.ports import RerankerPort
 from src.application.use_cases import SearchSimilarCompaniesUseCase
+from src.domain.services import MarketDataRepository, StubMarketDataRepository
 from src.infrastructure.llm.qwen import QwenServiceAdapter, QwenServiceConfig
 from src.infrastructure.persistence.postgres import PostgresVectorStoreRepository
 from src.shared.config import settings
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Global repository instance (will be initialized once)
 _vector_store_repository: PostgresVectorStoreRepository | None = None
 _reranker: RerankerPort | None = None
+_market_data_repository: MarketDataRepository | None = None
 
 
 async def get_vector_store_repository() -> AsyncGenerator[
@@ -91,25 +93,49 @@ async def get_reranker() -> AsyncGenerator[RerankerPort | None]:
     yield _reranker
 
 
+async def get_market_data_repository() -> AsyncGenerator[MarketDataRepository]:
+    """Get the market data repository instance.
+
+    Currently returns a stub implementation. This will be replaced
+    with a real implementation when market data source is available.
+
+    Yields:
+        MarketDataRepository instance
+    """
+    global _market_data_repository
+
+    if _market_data_repository is None:
+        _market_data_repository = StubMarketDataRepository()
+        logger.info("Initialized stub market data repository")
+
+    yield _market_data_repository
+
+
 async def get_search_similar_companies_use_case(
-    vector_store: PostgresVectorStoreRepository = Depends(get_vector_store_repository),
-    reranker: RerankerPort | None = Depends(get_reranker),
+    vector_store: PostgresVectorStoreRepository = Depends(get_vector_store_repository),  # noqa: B008
+    reranker: RerankerPort | None = Depends(get_reranker),  # noqa: B008
+    market_data_repository: MarketDataRepository = Depends(get_market_data_repository),  # noqa: B008
 ) -> SearchSimilarCompaniesUseCase:
     """Get the search similar companies use case.
 
     Args:
         vector_store: Injected vector store repository
         reranker: Optional injected reranker service
+        market_data_repository: Injected market data repository
 
     Returns:
         SearchSimilarCompaniesUseCase instance
     """
-    return SearchSimilarCompaniesUseCase(vector_store=vector_store, reranker=reranker)
+    return SearchSimilarCompaniesUseCase(
+        vector_store=vector_store,
+        reranker=reranker,
+        market_data_repository=market_data_repository,
+    )
 
 
 async def shutdown_dependencies():
     """Cleanup function to close connections on shutdown."""
-    global _vector_store_repository, _reranker
+    global _vector_store_repository, _reranker, _market_data_repository
 
     if _vector_store_repository:
         await _vector_store_repository.close()

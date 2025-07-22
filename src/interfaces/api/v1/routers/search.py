@@ -6,11 +6,18 @@ development principles with strict input/output validation.
 """
 
 import logging
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.application.use_cases import SearchSimilarCompaniesUseCase
-from src.domain.value_objects import Document
+from src.domain.services import (
+    AggregatedCompany,
+    QueryCompanyParser,
+)
+from src.domain.services import (
+    MarketFilters as DomainMarketFilters,
+)
 from src.interfaces.api.dependencies import get_search_similar_companies_use_case
 from src.interfaces.api.v1.schemas.search import (
     CompanyResult,
@@ -27,63 +34,61 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _convert_documents_to_response(
-    documents: list[Document],
+def _convert_aggregated_to_response(
+    aggregated_companies: list[AggregatedCompany],
     query_identifier: str,
     include_justification: bool,
     filters_applied: dict,
+    total_before_limit: int,
 ) -> SearchSimilarCompaniesResponse:
-    """Convert domain Documents to API response format.
+    """Convert aggregated companies to API response format.
 
     Args:
-        documents: List of Document objects from the use case
+        aggregated_companies: List of AggregatedCompany objects from the use case
         query_identifier: Original query identifier
         include_justification: Whether to include justifications
         filters_applied: Dictionary of applied filters
+        total_before_limit: Total companies before top_k limit
 
     Returns:
         SearchSimilarCompaniesResponse formatted for API
     """
-    # Group documents by company to aggregate concepts
-    company_results = {}
+    # Parse query company information
+    query_parser = QueryCompanyParser()
+    parsed_query = query_parser.resolve_from_results(
+        query_identifier=query_identifier,
+        aggregated_companies=aggregated_companies,
+    )
 
-    for doc in documents:
-        if doc.company_code not in company_results:
-            company_results[doc.company_code] = {
-                "company_name": doc.company_name,
-                "company_code": doc.company_code,
-                "concepts": [],
-                "max_score": doc.similarity_score,
-            }
-
-        company_results[doc.company_code]["concepts"].append(
-            {"name": doc.concept_name, "similarity_score": doc.similarity_score}
-        )
-
-        # Keep the highest score for the company
-        if doc.similarity_score > company_results[doc.company_code]["max_score"]:
-            company_results[doc.company_code]["max_score"] = doc.similarity_score
+    query_company = QueryCompany(
+        name=parsed_query.name,
+        code=parsed_query.code or query_identifier[:6],  # Fallback to first 6 chars
+    )
 
     # Convert to CompanyResult objects
     results = []
-    for company_code, data in company_results.items():
+    for company in aggregated_companies:
+        # Get top 5 concepts for this company
+        top_concepts = company.matched_concepts[:5]
+
         matched_concepts = [
             MatchedConcept(
-                name=concept["name"], similarity_score=concept["similarity_score"]
+                name=concept.concept_name,
+                similarity_score=concept.similarity_score,
             )
-            for concept in sorted(
-                data["concepts"], key=lambda x: x["similarity_score"], reverse=True
-            )[:5]  # Limit to top 5 concepts per company
+            for concept in top_concepts
         ]
 
         company_result = CompanyResult(
-            company_name=data["company_name"],
-            company_code=company_code,
-            relevance_score=data["max_score"],
+            company_name=company.company_name,
+            company_code=company.company_code,
+            relevance_score=company.relevance_score,
             matched_concepts=matched_concepts,
             justification=(
                 Justification(
-                    summary=f"Matched {len(data['concepts'])} business concepts",
+                    summary=(
+                        f"Matched {len(company.matched_concepts)} business concepts"
+                    ),
                     supporting_evidence=[
                         f"{c.name} (score: {c.similarity_score:.2f})"
                         for c in matched_concepts[:3]
@@ -95,19 +100,11 @@ def _convert_documents_to_response(
         )
         results.append(company_result)
 
-    # Sort by relevance score
-    results.sort(key=lambda x: x.relevance_score, reverse=True)
-
-    # Extract query company info from first document if available
-    query_company = QueryCompany(
-        name=query_identifier,  # Will be replaced with actual name once found
-        code=query_identifier if len(query_identifier) <= 10 else None,
-    )
-
     return SearchSimilarCompaniesResponse(
         query_company=query_company,
         metadata=SearchMetadata(
-            total_results_before_limit=len(results), filters_applied=filters_applied
+            total_results_before_limit=total_before_limit,
+            filters_applied=filters_applied,
         ),
         results=results,
     )
@@ -128,7 +125,7 @@ async def search_similar_companies(
         False,
         description="Whether to include detailed justification for each match",
     ),
-    use_case: SearchSimilarCompaniesUseCase = Depends(
+    use_case: SearchSimilarCompaniesUseCase = Depends(  # noqa: B008
         get_search_similar_companies_use_case
     ),
 ) -> SearchSimilarCompaniesResponse:
@@ -153,31 +150,52 @@ async def search_similar_companies(
         # Log the search request
         logger.info(f"Searching similar companies for: {request.query_identifier}")
 
+        # Convert API market filters to domain model if provided
+        domain_market_filters = None
+        if request.market_filters:
+            domain_market_filters = DomainMarketFilters(
+                max_market_cap_cny=(
+                    Decimal(str(request.market_filters.max_market_cap_cny))
+                    if request.market_filters.max_market_cap_cny
+                    else None
+                ),
+                min_5day_avg_volume=(
+                    Decimal(str(request.market_filters.min_5day_avg_volume))
+                    if request.market_filters.min_5day_avg_volume
+                    else None
+                ),
+            )
+
         # Execute search through use case
-        documents = await use_case.execute(
+        # Note: use_case handles aggregation, filtering and limiting internally
+        aggregated_companies, filters_applied_by_service = await use_case.execute(
             target_identifier=request.query_identifier,
             text_to_embed=None,  # Not implemented in this story
             top_k=request.top_k,
             similarity_threshold=request.similarity_threshold,
+            market_filters=domain_market_filters,
         )
 
-        # Determine which filters were applied
+        # Merge filter information
         filters_applied = {
             "similarity_threshold": request.similarity_threshold != 0.7,
-            "market_cap_filter": bool(
-                request.market_filters and request.market_filters.max_market_cap_cny
+            "market_cap_filter": filters_applied_by_service.get(
+                "market_cap_filter", False
             ),
-            "volume_filter": bool(
-                request.market_filters and request.market_filters.min_5day_avg_volume
-            ),
+            "volume_filter": filters_applied_by_service.get("volume_filter", False),
         }
 
-        # Convert documents to response format
-        response = _convert_documents_to_response(
-            documents=documents,
+        # For now, we use the length of results as total_before_limit
+        # In future, the use case should return this information
+        total_before_limit = len(aggregated_companies)
+
+        # Convert aggregated companies to response format
+        response = _convert_aggregated_to_response(
+            aggregated_companies=aggregated_companies,
             query_identifier=request.query_identifier,
             include_justification=include_justification,
             filters_applied=filters_applied,
+            total_before_limit=total_before_limit,
         )
 
         logger.info(
