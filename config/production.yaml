@@ -71,6 +71,7 @@ vector_store:
   similarity_threshold: 0.75
   max_results: 50
   index:
+    distance_metric: cosine  # Options: l2, cosine, ip (inner product)
     m: 32
     ef_construction: 128
     ef_search: 64

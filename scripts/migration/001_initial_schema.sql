@@ -80,9 +80,9 @@ CREATE INDEX idx_concepts_category ON business_concepts_master(concept_category)
 CREATE INDEX idx_concepts_active ON business_concepts_master(is_active) WHERE is_active = true;
 
 -- Create HNSW index for high-speed vector similarity search
--- Using cosine distance for similarity calculation
+-- Using configurable distance metric for similarity calculation
 CREATE INDEX idx_concepts_embedding ON business_concepts_master 
-USING hnsw (embedding halfvec_cosine_ops)
+USING hnsw (embedding halfvec_${DISTANCE_METRIC}_ops)
 WITH (m = ${HNSW_M}, ef_construction = ${HNSW_EF_CONSTRUCTION});
 
 -- Create trigger for business_concepts_master updated_at

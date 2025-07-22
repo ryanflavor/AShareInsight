@@ -88,6 +88,15 @@ class ConfigurationLoader:
             .get("ef_construction", 64)
         )
 
+    @property
+    def distance_metric(self) -> str:
+        """Get distance metric for vector similarity search."""
+        return (
+            self.config.get("vector_store", {})
+            .get("index", {})
+            .get("distance_metric", "cosine")
+        )
+
 
 class MigrationRunner:
     """Handles database migration execution."""
@@ -148,6 +157,7 @@ class MigrationRunner:
             "VECTOR_DIMENSION": str(self.config_loader.vector_dimension),
             "HNSW_M": str(self.config_loader.hnsw_m),
             "HNSW_EF_CONSTRUCTION": str(self.config_loader.hnsw_ef_construction),
+            "DISTANCE_METRIC": self.config_loader.distance_metric,
         }
 
         for var_name, value in replacements.items():

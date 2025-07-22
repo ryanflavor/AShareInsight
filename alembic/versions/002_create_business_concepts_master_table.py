@@ -39,7 +39,7 @@ def upgrade() -> None:
         sa.Column("development_stage", sa.String(length=50), nullable=True),
         sa.Column(
             "embedding", sa.Text(), nullable=True
-        ),  # halfvec(2560) - to be migrated later
+        ),  # halfvec(2560) - migrated by 09888a569d40_convert_embedding_to_halfvec.py
         sa.Column(
             "concept_details", postgresql.JSONB(astext_type=sa.Text()), nullable=False
         ),

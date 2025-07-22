@@ -76,7 +76,7 @@ async def create_vector_indices():
                         text("""
                         CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_business_concepts_embedding_hnsw
                         ON business_concepts_master 
-                        USING hnsw (embedding halfvec_l2_ops)
+                        USING hnsw (embedding vector_cosine_ops)
                         WITH (m = 16, ef_construction = 200)
                         """)
                     )
