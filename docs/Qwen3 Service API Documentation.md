@@ -221,7 +221,7 @@ All endpoints return errors in the following format:
 import requests
 import json
 
-class QwenServiceClient:
+class QwenRerankClient:
     def __init__(self, base_url="http://localhost:9547"):
         self.base_url = base_url
         self.session = requests.Session()
@@ -248,7 +248,7 @@ class QwenServiceClient:
         return response.json()
 
 # Usage example
-client = QwenServiceClient("http://192.168.1.100:9547")
+client = QwenRerankClient("http://192.168.1.100:9547")
 
 # Embed texts
 result = client.embed_texts(["Hello world", "AI is amazing"])

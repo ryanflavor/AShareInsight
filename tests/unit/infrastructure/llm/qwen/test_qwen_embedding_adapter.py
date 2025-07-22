@@ -22,7 +22,18 @@ class TestQwenEmbeddingConfig:
 
     def test_default_config(self):
         """Test default configuration values."""
-        config = QwenEmbeddingConfig()
+        # QwenEmbeddingConfig now requires all fields
+        config = QwenEmbeddingConfig(
+            base_url="http://localhost:9547",
+            model_name="Qwen3-Embedding-4B",
+            timeout=300,
+            max_batch_size=50,
+            normalize=True,
+            max_retries=3,
+            retry_wait_min=1,
+            retry_wait_max=10,
+            embedding_dimension=2560,
+        )
         assert config.base_url == "http://localhost:9547"
         assert config.timeout == 300
         assert config.max_batch_size == 50
@@ -30,15 +41,27 @@ class TestQwenEmbeddingConfig:
         assert config.max_retries == 3
         assert config.retry_wait_min == 1
         assert config.retry_wait_max == 10
+        assert config.embedding_dimension == 2560
 
     def test_custom_config(self):
         """Test custom configuration values."""
         config = QwenEmbeddingConfig(
-            base_url="http://custom:8080", timeout=60, max_batch_size=100
+            base_url="http://custom:8080",
+            model_name="Custom-Model",
+            timeout=60,
+            max_batch_size=100,
+            normalize=False,
+            max_retries=5,
+            retry_wait_min=2,
+            retry_wait_max=20,
+            embedding_dimension=1024,
         )
         assert config.base_url == "http://custom:8080"
+        assert config.model_name == "Custom-Model"
         assert config.timeout == 60
         assert config.max_batch_size == 100
+        assert config.normalize is False
+        assert config.embedding_dimension == 1024
 
 
 class TestQwenEmbeddingAdapter:
@@ -47,7 +70,18 @@ class TestQwenEmbeddingAdapter:
     @pytest.fixture
     def adapter(self):
         """Create a Qwen embedding adapter instance."""
-        return QwenEmbeddingAdapter()
+        config = QwenEmbeddingConfig(
+            base_url="http://localhost:9547",
+            model_name="Qwen3-Embedding-4B",
+            timeout=300,
+            max_batch_size=50,
+            normalize=True,
+            max_retries=3,
+            retry_wait_min=1,
+            retry_wait_max=10,
+            embedding_dimension=2560,
+        )
+        return QwenEmbeddingAdapter(config)
 
     @pytest.fixture
     def mock_response(self):

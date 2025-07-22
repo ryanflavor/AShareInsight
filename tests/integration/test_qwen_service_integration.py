@@ -9,9 +9,9 @@ import pytest
 
 from src.application.ports.reranker_port import RerankRequest
 from src.domain.value_objects.document import Document
-from src.infrastructure.llm.qwen.qwen_service_adapter import (
-    QwenServiceAdapter,
-    QwenServiceConfig,
+from src.infrastructure.llm.qwen.qwen_rerank_adapter import (
+    QwenRerankAdapter,
+    QwenRerankConfig,
 )
 
 # Configure logging
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
-async def test_qwen_service():
+async def test_qwen_rerank():
     """Test the Qwen Service integration."""
 
     # Create test documents
@@ -69,13 +69,13 @@ async def test_qwen_service():
     ]
 
     # Create adapter config
-    config = QwenServiceConfig(
+    config = QwenRerankConfig(
         service_url="http://localhost:9547", timeout_seconds=10.0, max_retries=2
     )
 
     # Test the adapter
     try:
-        async with QwenServiceAdapter(config) as adapter:
+        async with QwenRerankAdapter(config) as adapter:
             logger.info("Connected to Qwen Service")
 
             # Check if service is ready
@@ -117,4 +117,4 @@ async def test_qwen_service():
 
 
 if __name__ == "__main__":
-    asyncio.run(test_qwen_service())
+    asyncio.run(test_qwen_rerank())

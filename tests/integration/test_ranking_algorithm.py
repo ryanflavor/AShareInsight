@@ -122,12 +122,18 @@ class TestCompleteRankingFlow:
         )
 
         # Execute search
-        results = await use_case.execute(
+        result = await use_case.execute(
             target_identifier="建设银行",
             text_to_embed="银行零售业务",
             top_k=10,
             similarity_threshold=0.7,
         )
+
+        # Extract results list from tuple if needed
+        if isinstance(result, tuple):
+            results, filter_info = result
+        else:
+            results = result
 
         # Verify vector search was called
         mock_vector_store.search_similar_concepts.assert_called_once()
@@ -174,10 +180,16 @@ class TestCompleteRankingFlow:
         )
 
         # Execute search
-        results = await use_case.execute(
+        result = await use_case.execute(
             target_identifier="建设银行",
             top_k=10,
         )
+
+        # Extract results list from tuple if needed
+        if isinstance(result, tuple):
+            results, filter_info = result
+        else:
+            results = result
 
         # Verify results are sorted by importance score
         assert len(results) == 3
@@ -207,10 +219,16 @@ class TestCompleteRankingFlow:
         )
 
         # Execute search - should not raise exception
-        results = await use_case.execute(
+        result = await use_case.execute(
             target_identifier="建设银行",
             top_k=10,
         )
+
+        # Extract results list from tuple if needed
+        if isinstance(result, tuple):
+            results, filter_info = result
+        else:
+            results = result
 
         # Verify reranker was attempted
         mock_reranker.rerank_documents.assert_called_once()
@@ -238,10 +256,16 @@ class TestCompleteRankingFlow:
         )
 
         # Execute search
-        results = await use_case.execute(
+        result = await use_case.execute(
             target_identifier="不存在的公司",
             top_k=10,
         )
+
+        # Extract results list from tuple if needed
+        if isinstance(result, tuple):
+            results, filter_info = result
+        else:
+            results = result
 
         # Verify results
         assert results == []
@@ -286,10 +310,16 @@ class TestCompleteRankingFlow:
         )
 
         # Execute search
-        results = await use_case.execute(
+        result = await use_case.execute(
             target_identifier="建设银行",
             top_k=2,  # Request only top 2
         )
+
+        # Extract results list from tuple if needed
+        if isinstance(result, tuple):
+            results, filter_info = result
+        else:
+            results = result
 
         # Verify only 2 results returned
         assert len(results) == 2
@@ -317,10 +347,16 @@ class TestCompleteRankingFlow:
         )
 
         # Execute search
-        results = await use_case.execute(
+        result = await use_case.execute(
             target_identifier="建设银行",
             top_k=10,
         )
+
+        # Extract results list from tuple if needed
+        if isinstance(result, tuple):
+            results, filter_info = result
+        else:
+            results = result
 
         # Verify all results maintain the same source concept ID
         expected_source_id = UUID("87654321-4321-8765-4321-876543218765")

@@ -85,7 +85,7 @@ ModelLoadError: Failed to connect to Qwen Service at http://localhost:9547
 1. Verify Qwen Service is running: `curl http://localhost:9547/health`
 2. Check correct port (9547, not 8000)
 3. Ensure network connectivity
-4. Check service logs in `qwen_service/logs/`
+4. Check service logs in `qwen_rerank/logs/`
 
 ### Service Timeout
 

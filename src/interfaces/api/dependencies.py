@@ -12,7 +12,7 @@ from fastapi import Depends
 from src.application.ports import RerankerPort
 from src.application.use_cases import SearchSimilarCompaniesUseCase
 from src.domain.services import MarketDataRepository, StubMarketDataRepository
-from src.infrastructure.llm.qwen import QwenServiceAdapter, QwenServiceConfig
+from src.infrastructure.llm.qwen import QwenRerankAdapter, QwenRerankConfig
 from src.infrastructure.persistence.postgres import PostgresVectorStoreRepository
 from src.shared.config import settings
 
@@ -62,20 +62,20 @@ async def get_reranker() -> AsyncGenerator[RerankerPort | None]:
     """
     global _reranker
 
-    if not settings.reranker_enabled:
+    if not settings.reranker.reranker_enabled:
         yield None
         return
 
     if _reranker is None:
         try:
             # Use HTTP service adapter
-            config = QwenServiceConfig(
-                service_url=settings.reranker_service_url,
-                timeout_seconds=settings.reranker_timeout_seconds,
-                max_retries=settings.reranker_max_retries,
-                retry_backoff=settings.reranker_retry_backoff,
+            config = QwenRerankConfig(
+                service_url=settings.reranker.reranker_service_url,
+                timeout_seconds=settings.reranker.reranker_timeout_seconds,
+                max_retries=settings.reranker.reranker_max_retries,
+                retry_backoff=settings.reranker.reranker_retry_backoff,
             )
-            _reranker = QwenServiceAdapter(config)
+            _reranker = QwenRerankAdapter(config)
             logger.info("Initialized Qwen Service HTTP adapter")
 
             # Verify reranker is ready

@@ -14,7 +14,7 @@ import asyncpg
 from asyncpg import Pool
 
 from src.application.ports import VectorStorePort
-from src.domain.entities import BusinessConcept
+from src.domain.entities import BusinessConceptEntity as BusinessConcept
 from src.domain.value_objects import BusinessConceptQuery, Document
 from src.infrastructure.caching.simple_cache import (
     create_cache_key,
@@ -65,10 +65,10 @@ class PostgresVectorStoreRepository(VectorStorePort):
         if not self._pool:
             try:
                 self._pool = await asyncpg.create_pool(
-                    settings.postgres_dsn_sync,
-                    min_size=settings.db_pool_min_size,
-                    max_size=settings.db_pool_max_size,
-                    timeout=settings.db_pool_timeout,
+                    settings.database.postgres_dsn_sync,
+                    min_size=settings.database.db_pool_min_size,
+                    max_size=settings.database.db_pool_max_size,
+                    timeout=settings.database.db_pool_timeout,
                     command_timeout=60,
                 )
                 self._is_initialized = True
@@ -76,7 +76,7 @@ class PostgresVectorStoreRepository(VectorStorePort):
             except Exception as e:
                 logger.error(f"Failed to create connection pool: {e}")
                 raise DatabaseConnectionError(
-                    database_name=settings.postgres_db, reason=str(e)
+                    database_name=settings.database.postgres_db, reason=str(e)
                 ) from e
         return self._pool
 
@@ -92,13 +92,13 @@ class PostgresVectorStoreRepository(VectorStorePort):
         try:
             # Acquire and release connections up to min_size to force creation
             warmup_tasks = []
-            for _ in range(settings.db_pool_min_size):
+            for _ in range(settings.database.db_pool_min_size):
                 warmup_tasks.append(self._warmup_single_connection(pool))
 
             await asyncio.gather(*warmup_tasks, return_exceptions=True)
             logger.info(
                 f"Connection pool warmup completed with "
-                f"{settings.db_pool_min_size} connections"
+                f"{settings.database.db_pool_min_size} connections"
             )
         except Exception as e:
             logger.warning(f"Connection pool warmup partially failed: {e}")
@@ -226,7 +226,7 @@ class PostgresVectorStoreRepository(VectorStorePort):
             except Exception as e:
                 logger.error(f"Search failed: {e}")
                 raise DatabaseConnectionError(
-                    database_name=settings.postgres_db,
+                    database_name=settings.database.postgres_db,
                     reason=f"Search operation failed: {str(e)}",
                 ) from e
 
@@ -320,6 +320,7 @@ class PostgresVectorStoreRepository(VectorStorePort):
 
             concepts = []
             for row in rows:
+                # Create BusinessConcept with only the fields it actually has
                 concept = BusinessConcept(
                     concept_id=row["concept_id"],
                     company_code=row["company_code"],
@@ -502,7 +503,7 @@ class PostgresVectorStoreRepository(VectorStorePort):
             if isinstance(e, CircuitOpenError):
                 logger.error("Database circuit breaker is open - too many failures")
                 raise DatabaseConnectionError(
-                    database_name=settings.postgres_db,
+                    database_name=settings.database.postgres_db,
                     reason="Database temporarily unavailable (circuit breaker open)",
                 ) from e
             raise
