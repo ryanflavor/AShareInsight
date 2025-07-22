@@ -13,11 +13,14 @@ import structlog
 from src.application.ports.business_concept_master_repository import (
     BusinessConceptMasterRepositoryPort,
 )
+from src.application.ports.embedding_service_port import EmbeddingServicePort
 from src.application.ports.source_document_repository import (
     SourceDocumentRepositoryPort,
 )
+from src.application.use_cases.build_vector_index import BuildVectorIndexUseCase
 from src.domain.entities.company import BusinessConcept
 from src.domain.services.data_fusion_service import DataFusionService
+from src.domain.services.vectorization_service import VectorizationService
 from src.infrastructure.monitoring.fusion_metrics import FusionMetrics
 from src.shared.exceptions.business_exceptions import OptimisticLockError
 
@@ -32,7 +35,10 @@ class UpdateMasterDataUseCase:
         source_document_repo: SourceDocumentRepositoryPort,
         business_concept_repo: BusinessConceptMasterRepositoryPort,
         data_fusion_service: DataFusionService,
+        embedding_service: EmbeddingServicePort | None = None,
+        vectorization_service: VectorizationService | None = None,
         batch_size: int = 50,
+        enable_async_vectorization: bool = True,
     ):
         """Initialize the use case with dependencies.
 
@@ -40,12 +46,28 @@ class UpdateMasterDataUseCase:
             source_document_repo: Repository for source documents
             business_concept_repo: Repository for business concept master data
             data_fusion_service: Service for data fusion logic
+            embedding_service: Optional service for generating embeddings
+            vectorization_service: Optional service for text preparation
             batch_size: Number of concepts to process in each batch
+            enable_async_vectorization: Whether to enable async vector building
         """
         self.source_document_repo = source_document_repo
         self.business_concept_repo = business_concept_repo
         self.data_fusion_service = data_fusion_service
+        self.embedding_service = embedding_service
+        self.vectorization_service = vectorization_service
         self.batch_size = batch_size
+        self.enable_async_vectorization = enable_async_vectorization
+
+        # Create vector index use case if services are provided
+        self.vector_index_use_case = None
+        if embedding_service and vectorization_service:
+            self.vector_index_use_case = BuildVectorIndexUseCase(
+                repository=business_concept_repo,
+                embedding_service=embedding_service,
+                vectorization_service=vectorization_service,
+                batch_size=batch_size,
+            )
 
     async def execute(self, doc_id: UUID) -> dict[str, Any]:
         """Execute the master data update for a specific document.
@@ -87,6 +109,8 @@ class UpdateMasterDataUseCase:
                 "concepts_skipped": 0,
                 "total_concepts": 0,
                 "processing_time_ms": 0,
+                "concepts_needing_vectorization": 0,
+                "vectorization_triggered": False,
             }
 
         # Process concepts with monitoring
@@ -116,6 +140,25 @@ class UpdateMasterDataUseCase:
             stats = context.get_summary()
             stats["total_concepts"] = len(business_concepts)
             stats["processing_time_ms"] = 0  # Will be set by the context manager
+
+            # Track concepts needing vectorization
+            stats["concepts_needing_vectorization"] = (
+                context.concepts_needing_vectorization
+            )
+
+            # Trigger async vectorization if enabled and we have new/updated concepts
+            if (
+                self.enable_async_vectorization
+                and self.vector_index_use_case
+                and context.concepts_needing_vectorization > 0
+            ):
+                # Run vectorization asynchronously without awaiting
+                asyncio.create_task(
+                    self._run_async_vectorization(source_doc.company_code)
+                )
+                stats["vectorization_triggered"] = True
+            else:
+                stats["vectorization_triggered"] = False
 
             logger.info(
                 "master_data_update_completed",
@@ -173,6 +216,10 @@ class UpdateMasterDataUseCase:
         """
         batch_stats = {"created": 0, "updated": 0, "skipped": 0}
 
+        # Track concepts needing vectorization
+        if not hasattr(context, "concepts_needing_vectorization"):
+            context.concepts_needing_vectorization = 0
+
         for concept in concepts:
             try:
                 success = await self._process_single_concept(
@@ -181,12 +228,14 @@ class UpdateMasterDataUseCase:
                 if success == "created":
                     batch_stats["created"] += 1
                     context.record_created()
+                    context.concepts_needing_vectorization += 1
                     FusionMetrics.record_concept_created(
                         company_code, concept.concept_name
                     )
                 elif success == "updated":
                     batch_stats["updated"] += 1
                     context.record_updated()
+                    context.concepts_needing_vectorization += 1
             except Exception as e:
                 logger.error(
                     "failed_to_process_concept",
@@ -273,3 +322,36 @@ class UpdateMasterDataUseCase:
         await self.business_concept_repo.save(new_master)
 
         return "created"
+
+    async def _run_async_vectorization(self, company_code: str) -> None:
+        """Run vectorization asynchronously for a company.
+
+        Args:
+            company_code: The company code to vectorize concepts for
+        """
+        try:
+            logger.info(
+                "starting_async_vectorization",
+                company_code=company_code,
+            )
+
+            # Run vectorization for the specific company
+            if self.vector_index_use_case:
+                result = await self.vector_index_use_case.execute(
+                    rebuild_all=False,
+                    company_code=company_code,
+                )
+
+                logger.info(
+                    "async_vectorization_completed",
+                    company_code=company_code,
+                    **result,
+                )
+
+        except Exception as e:
+            logger.error(
+                "async_vectorization_failed",
+                company_code=company_code,
+                error=str(e),
+                exc_info=True,
+            )

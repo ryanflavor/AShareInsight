@@ -80,3 +80,46 @@ class BusinessConceptMasterRepositoryPort(ABC):
             The business concept if found, None otherwise
         """
         pass
+
+    @abstractmethod
+    async def update_embedding(self, concept_id: UUID, embedding: list[float]) -> None:
+        """Update only the embedding field for a business concept.
+
+        Args:
+            concept_id: The concept UUID
+            embedding: The embedding vector as a list of floats
+
+        Note:
+            This method does not update the version field to avoid
+            triggering business data version changes.
+        """
+        pass
+
+    @abstractmethod
+    async def batch_update_embeddings(
+        self, embeddings: list[tuple[UUID, list[float]]]
+    ) -> None:
+        """Batch update embeddings for multiple business concepts.
+
+        Args:
+            embeddings: List of tuples containing (concept_id, embedding)
+
+        Note:
+            This method does not update the version field to avoid
+            triggering business data version changes.
+        """
+        pass
+
+    @abstractmethod
+    async def find_concepts_needing_embeddings(
+        self, limit: int | None = None
+    ) -> list[BusinessConceptMaster]:
+        """Find concepts that need embeddings (embedding is null).
+
+        Args:
+            limit: Optional limit on number of concepts to return
+
+        Returns:
+            List of business concepts needing embeddings
+        """
+        pass

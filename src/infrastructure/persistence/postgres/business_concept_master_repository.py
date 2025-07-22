@@ -220,3 +220,117 @@ class PostgresBusinessConceptMasterRepository(BusinessConceptMasterRepositoryPor
         if db_concept:
             return db_concept.to_domain_entity(BusinessConceptMaster)
         return None
+
+    async def update_embedding(self, concept_id: UUID, embedding: list[float]) -> None:
+        """Update only the embedding field for a business concept.
+
+        Args:
+            concept_id: The concept UUID
+            embedding: The embedding vector as a list of floats
+
+        Note:
+            This method does not update the version field to avoid
+            triggering business data version changes.
+        """
+        stmt = (
+            update(BusinessConceptMasterModel)
+            .where(BusinessConceptMasterModel.concept_id == concept_id)
+            .values(embedding=embedding)
+        )
+
+        result = await self.session.execute(stmt)
+
+        if result.rowcount == 0:
+            logger.warning(
+                "embedding_update_failed_not_found", concept_id=str(concept_id)
+            )
+        else:
+            logger.info(
+                "embedding_updated",
+                concept_id=str(concept_id),
+                embedding_dim=len(embedding),
+            )
+
+    async def batch_update_embeddings(
+        self, embeddings: list[tuple[UUID, list[float]]]
+    ) -> None:
+        """Batch update embeddings for multiple business concepts.
+
+        Args:
+            embeddings: List of tuples containing (concept_id, embedding)
+
+        Note:
+            This method does not update the version field to avoid
+            triggering business data version changes.
+        """
+        if not embeddings:
+            return
+
+        # Process in batches to avoid query size limits
+        batch_size = 100
+        successful_updates = 0
+
+        for i in range(0, len(embeddings), batch_size):
+            batch = embeddings[i : i + batch_size]
+
+            # Build update data for bulk update
+            update_data = []
+            for concept_id, embedding in batch:
+                update_data.append({"concept_id": concept_id, "embedding": embedding})
+
+            # Execute updates individually to avoid bulk update issues
+            for update_item in update_data:
+                stmt = (
+                    update(BusinessConceptMasterModel)
+                    .where(
+                        BusinessConceptMasterModel.concept_id
+                        == update_item["concept_id"]
+                    )
+                    .values(embedding=update_item["embedding"])
+                    .execution_options(synchronize_session=False)
+                )
+                result = await self.session.execute(stmt)
+                successful_updates += result.rowcount
+
+            await self.session.flush()
+
+            logger.info(
+                "batch_embeddings_updated",
+                batch_start=i,
+                batch_end=min(i + batch_size, len(embeddings)),
+                successful_updates=successful_updates,
+                total_count=len(embeddings),
+            )
+
+    async def find_concepts_needing_embeddings(
+        self, limit: int | None = None
+    ) -> list[BusinessConceptMaster]:
+        """Find concepts that need embeddings (embedding is null).
+
+        Args:
+            limit: Optional limit on number of concepts to return
+
+        Returns:
+            List of business concepts needing embeddings
+        """
+        stmt = (
+            select(BusinessConceptMasterModel)
+            .where(
+                BusinessConceptMasterModel.embedding.is_(None),
+                BusinessConceptMasterModel.is_active.is_(True),
+            )
+            .order_by(
+                BusinessConceptMasterModel.importance_score.desc(),
+                BusinessConceptMasterModel.created_at.asc(),
+            )
+        )
+
+        if limit:
+            stmt = stmt.limit(limit)
+
+        result = await self.session.execute(stmt)
+        db_concepts = result.scalars().all()
+
+        return [
+            concept.to_domain_entity(BusinessConceptMaster) for concept in db_concepts
+        ]

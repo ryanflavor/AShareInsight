@@ -159,7 +159,11 @@ class BusinessConceptMasterModel(Base):
     concept_category = Column(String(50), nullable=False)
     importance_score = Column(Numeric(3, 2), nullable=False)
     development_stage = Column(String(50), nullable=True)
-    embedding = Column(Text, nullable=True)  # halfvec(2560) - to be migrated later
+    # Using pgvector's Vector type with dimensions=2560 (halfvec precision)
+    # Note: halfvec uses half-precision floats to save 50% storage space
+    from pgvector.sqlalchemy import Vector
+
+    embedding = Column(Vector(2560), nullable=True)
     concept_details = Column(JSONB, nullable=False)
     last_updated_from_doc_id = Column(
         PGUUID(as_uuid=True),
@@ -212,8 +216,7 @@ class BusinessConceptMasterModel(Base):
             concept_category=self.concept_category,
             importance_score=Decimal(str(self.importance_score)),
             development_stage=self.development_stage,
-            # Skip embedding field - will be handled in Story 1.5
-            embedding=None,  # self.embedding.encode() if self.embedding else None,
+            embedding=list(self.embedding) if self.embedding is not None else None,
             concept_details=self.concept_details,
             last_updated_from_doc_id=self.last_updated_from_doc_id,
             version=self.version,
@@ -241,8 +244,7 @@ class BusinessConceptMasterModel(Base):
             "concept_category": entity.concept_category,
             "importance_score": entity.importance_score,
             "development_stage": entity.development_stage,
-            # Skip embedding field - will be handled in Story 1.5
-            # embedding=entity.embedding.decode() if entity.embedding else None,
+            "embedding": entity.embedding if entity.embedding else None,
             "concept_details": entity.concept_details,
             "last_updated_from_doc_id": entity.last_updated_from_doc_id,
             "version": entity.version,

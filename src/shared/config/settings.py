@@ -28,6 +28,29 @@ class LLMSettings(BaseSettings):
     )
 
 
+class QwenEmbeddingSettings(BaseSettings):
+    """Qwen embedding service settings."""
+
+    qwen_base_url: str = "http://localhost:9547"
+    qwen_timeout: int = 300  # 5 minutes
+    qwen_max_batch_size: int = 50
+    qwen_normalize: bool = True
+    qwen_max_retries: int = 3
+    qwen_retry_wait_min: int = 1  # seconds
+    qwen_retry_wait_max: int = 10  # seconds
+    qwen_embedding_dimension: int = 2560
+    
+    # Text processing settings
+    qwen_max_text_length: int = 8000  # token limit
+    qwen_similarity_threshold: float = 0.95
+    qwen_length_ratio_min: float = 0.9
+    qwen_length_ratio_max: float = 1.1
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
+    )
+
+
 class DatabaseSettings(BaseSettings):
     """Database-specific settings."""
 
@@ -72,6 +95,7 @@ class Settings(BaseSettings):
 
     # Sub-settings
     llm: LLMSettings = LLMSettings()
+    qwen_embedding: QwenEmbeddingSettings = QwenEmbeddingSettings()
     database: DatabaseSettings = DatabaseSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
 
