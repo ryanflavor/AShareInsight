@@ -1,7 +1,7 @@
 """PostgreSQL implementation of BusinessConceptMasterRepositoryPort.
 
-This module provides the concrete implementation of the BusinessConceptMaster repository
-using PostgreSQL with async SQLAlchemy.
+This module provides the concrete implementation of the
+BusinessConceptMaster repository using PostgreSQL with async SQLAlchemy.
 """
 
 from uuid import UUID
@@ -96,7 +96,7 @@ class PostgresBusinessConceptMasterRepository(BusinessConceptMasterRepositoryPor
                     f"for company {business_concept.company_code}",
                     params=None,
                     orig=e,
-                )
+                ) from e
             raise
 
     async def update(
@@ -161,7 +161,8 @@ class PostgresBusinessConceptMasterRepository(BusinessConceptMasterRepositoryPor
         if result.rowcount == 0:
             # This shouldn't happen if we checked version above, but just in case
             raise OptimisticLockError(
-                f"Failed to update concept {business_concept.concept_id} due to concurrent modification"
+                f"Failed to update concept {business_concept.concept_id} "
+                f"due to concurrent modification"
             )
 
         logger.info(

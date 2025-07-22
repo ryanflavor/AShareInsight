@@ -158,7 +158,10 @@ class ExtractDocumentDataUseCase:
                             "archiving_skipped_no_company",
                             company_code=company_info.get("company_code"),
                             doc_type=doc_type.value,
-                            reason="Company not found, research report extraction continues without archiving",
+                            reason=(
+                                "Company not found, research report extraction "
+                                "continues without archiving"
+                            ),
                         )
                 except Exception as e:
                     # Log error but don't fail the extraction
@@ -205,7 +208,7 @@ class ExtractDocumentDataUseCase:
             )
             return document, company_info
         except Exception as e:
-            raise DocumentProcessingError(f"Failed to load document: {str(e)}")
+            raise DocumentProcessingError(f"Failed to load document: {str(e)}") from e
 
     def _detect_document_type(self, content: str, file_path: str) -> DocumentType:
         """Detect document type from content."""

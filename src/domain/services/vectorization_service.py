@@ -49,7 +49,9 @@ class VectorizationService:
         """
         self.embedding_service = embedding_service
         self.qwen_settings = qwen_settings or QwenEmbeddingSettings()
-        self.max_text_length = max_text_length or self.qwen_settings.qwen_max_text_length
+        self.max_text_length = (
+            max_text_length or self.qwen_settings.qwen_max_text_length
+        )
         self.concept_weight = concept_weight
         self.description_weight = description_weight
 

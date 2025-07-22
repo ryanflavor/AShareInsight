@@ -1,7 +1,7 @@
 """Business-specific exceptions for the AShareInsight application."""
 
 
-class BusinessException(Exception):
+class BusinessException(Exception):  # noqa: N818
     """Base exception for all business logic errors."""
 
     pass

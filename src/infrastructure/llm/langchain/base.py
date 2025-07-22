@@ -1,7 +1,9 @@
 """Base LangChain integration module for LLM services."""
 
 import httpx
-from langchain_openai import ChatOpenAI  # Using OpenAI format for Gemini-compatible API
+
+# Using OpenAI format for Gemini-compatible API
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field, SecretStr
 
 from src.shared.config.settings import get_settings
@@ -85,13 +87,13 @@ class LangChainBase:
                     limits=httpx.Limits(
                         max_keepalive_connections=settings.llm.connection_pool_size,
                         max_connections=settings.llm.connection_pool_size * 2,
-                        keepalive_expiry=settings.llm.http_keepalive_expiry,  # Configurable keepalive
+                        keepalive_expiry=settings.llm.http_keepalive_expiry,
                     ),
                     timeout=httpx.Timeout(
                         timeout=float(self.config.timeout),
-                        connect=settings.llm.http_connect_timeout,  # Configurable connection timeout
+                        connect=settings.llm.http_connect_timeout,
                         read=float(self.config.timeout),  # Read timeout
-                        write=settings.llm.http_write_timeout,  # Configurable write timeout
+                        write=settings.llm.http_write_timeout,
                     ),
                 )
 

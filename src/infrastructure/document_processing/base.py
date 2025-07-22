@@ -120,7 +120,9 @@ class BaseDocumentLoader(ABC):
             return ProcessedDocument(content=content, metadata=metadata)
 
         except Exception as e:
-            raise DocumentProcessingError(f"Failed to load document {path}: {str(e)}")
+            raise DocumentProcessingError(
+                f"Failed to load document {path}: {str(e)}"
+            ) from e
 
     def _calculate_hash(self, content: str) -> str:
         """Calculate SHA-256 hash of content.

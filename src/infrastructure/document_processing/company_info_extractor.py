@@ -13,8 +13,8 @@ class CompanyInfoExtractor:
     """Extract company information from document content."""
 
     def extract_info(
-        self, file_path: Path, content: str = None
-    ) -> dict[str, str | None]:
+        self, file_path: Path, content: str | None = None
+    ) -> dict[str, str | int | None]:
         """Extract all company information from a file.
 
         Args:
@@ -107,9 +107,15 @@ class CompanyInfoExtractor:
             # Markdown headers with company name
             r"^#\s*(.+?(?:股份有限公司|有限公司|股份公司|集团公司))\s*$",
             # Company name followed by year and report type
-            r"^#\s*(.+?(?:股份有限公司|有限公司|股份公司|集团公司))\s*\*?\*?20\d{2}",
+            (
+                r"^#\s*(.+?(?:股份有限公司|有限公司|股份公司|集团公司))"
+                r"\s*\*?\*?20\d{2}"
+            ),
             # Title format
-            r"(.+?(?:股份有限公司|有限公司|股份公司|集团公司))\s*20\d{2}\s*年年度报告",
+            (
+                r"(.+?(?:股份有限公司|有限公司|股份公司|集团公司))"
+                r"\s*20\d{2}\s*年年度报告"
+            ),
         ]
 
         for pattern in header_patterns:
@@ -136,7 +142,10 @@ class CompanyInfoExtractor:
         short_name = self.extract_short_name(content)
         if short_name:
             # Look for full company name containing the short name
-            pattern = rf"({re.escape(short_name)}[^。\n]*?(?:股份有限公司|有限公司|股份公司|集团公司))"
+            pattern = (
+                rf"({re.escape(short_name)}[^。\n]*?"
+                r"(?:股份有限公司|有限公司|股份公司|集团公司))"
+            )
             match = re.search(pattern, content[:10000])
             if match:
                 name = match.group(1).strip()
@@ -226,8 +235,10 @@ def extract_company_info_from_path(file_path: Path) -> tuple[str | None, int | N
             if not company_code:
                 company_code = info["code"]
             if not year:
-                year = info["year"]
-        except Exception:
-            pass
+                year_value = info["year"]
+                if isinstance(year_value, int):
+                    year = year_value
+        except Exception:  # noqa: S110
+            pass  # Continue with extracted values from filename if available
 
     return company_code, year

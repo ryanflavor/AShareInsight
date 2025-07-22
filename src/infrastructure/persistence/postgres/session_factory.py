@@ -84,7 +84,7 @@ class SessionFactory:
                 logger.warning("nested_transaction_rollback")
                 raise
 
-    async def execute_in_transaction(self, operation, *args, **kwargs) -> any:
+    async def execute_in_transaction(self, operation, *args, **kwargs):
         """Execute an operation within a transaction.
 
         This is a convenience method for executing a single operation

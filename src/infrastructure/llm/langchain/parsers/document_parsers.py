@@ -21,7 +21,8 @@ class AnnualReportParser(EnhancedOutputParser[AnnualReportExtraction]):
         """Get format instructions for annual report extraction."""
         return (
             "输出必须是有效的JSON格式，可以直接被JSON解析器解析。\n"
-            "所有数值类型字段（如holding_percentage, importance_score等）必须是数字，不能是字符串。\n"
+            "所有数值类型字段（如holding_percentage, importance_score等）"
+            "必须是数字，不能是字符串。\n"
             "如果某个字段没有找到对应信息，使用null而不是空字符串。\n"
             "source_sentences必须是原文的准确引用，不能改写或总结。"
         )

@@ -39,9 +39,9 @@ async def test_vector_store_connection_pool():
 
         # Verify pool exists
         assert pool is not None, "Connection pool was not created"
-        assert repository._is_initialized is True, (
-            "Repository not marked as initialized"
-        )
+        assert (
+            repository._is_initialized is True
+        ), "Repository not marked as initialized"
 
         # Test basic query through pool
         async with pool.acquire() as conn:
@@ -52,9 +52,9 @@ async def test_vector_store_connection_pool():
         # Clean up
         await repository.close()
         assert repository._pool is None, "Pool was not properly closed"
-        assert repository._is_initialized is False, (
-            "Repository still marked as initialized"
-        )
+        assert (
+            repository._is_initialized is False
+        ), "Repository still marked as initialized"
 
 
 if __name__ == "__main__":

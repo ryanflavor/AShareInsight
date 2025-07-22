@@ -9,9 +9,9 @@ from pydantic import BaseModel
 
 from src.shared.exceptions import LLMServiceError
 
-logger = structlog.get_logger(__name__)
-
 from .base import BaseOutputParser, T
+
+logger = structlog.get_logger(__name__)
 
 
 class ParsingMetrics(BaseModel):
@@ -150,8 +150,13 @@ class EnhancedOutputParser(BaseOutputParser[T]):
                 fixed_data = self._fix_numeric_strings(data)
                 fixed_json = json.dumps(fixed_data, ensure_ascii=False, indent=2)
                 return f"```json\n{fixed_json}\n```"
-            except:
-                pass
+            except (json.JSONDecodeError, LLMServiceError) as e:
+                # Log the error for debugging but continue with original text
+                logger.debug(
+                    "Failed to fix numeric strings",
+                    error=str(e),
+                    parser_name=self.parser_name,
+                )
 
         return text
 

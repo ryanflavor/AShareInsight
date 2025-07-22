@@ -90,7 +90,12 @@ def format_extraction_result(result) -> Table:
         if result.extraction_metadata.token_usage:
             table.add_row(
                 "Token Usage",
-                f"In: {result.extraction_metadata.token_usage.get('input_tokens', 0)}, Out: {result.extraction_metadata.token_usage.get('output_tokens', 0)}",
+                (
+                    f"In: "
+                    f"{result.extraction_metadata.token_usage.get('input_tokens', 0)}, "
+                    f"Out: "
+                    f"{result.extraction_metadata.token_usage.get('output_tokens', 0)}"
+                ),
             )
 
     # Company/Report info - handle both extraction_data and extracted_data
@@ -171,7 +176,8 @@ def extract_document(
     using Gemini LLM API. The extraction may take 2-3 minutes for large documents.
 
     Example:
-        $ python -m src.interfaces.cli.extract_document report.txt --document-type annual_report
+        $ python -m src.interfaces.cli.extract_document report.txt \
+            --document-type annual_report
 
     """
     setup_logging(debug)
@@ -233,13 +239,13 @@ def extract_document(
                     from src.infrastructure.persistence.postgres.connection import (
                         get_session,
                     )
-                    from src.infrastructure.persistence.postgres.source_document_repository import (
+                    from src.infrastructure.persistence.postgres.source_document_repository import (  # noqa: E501
                         PostgresSourceDocumentRepository,
                     )
 
                     async with get_session() as session:
                         repo = PostgresSourceDocumentRepository(session)
-                        from src.application.use_cases.archive_extraction_result import (
+                        from src.application.use_cases.archive_extraction_result import (  # noqa: E501
                             ArchiveExtractionResultUseCase,
                         )
 
@@ -272,7 +278,8 @@ def extract_document(
 
         # Display results (if we get here, extraction was successful)
         console.print(
-            f"\n[green]✓ Extraction completed successfully in {elapsed_time:.2f}s[/green]\n"
+            f"\n[green]✓ Extraction completed successfully "
+            f"in {elapsed_time:.2f}s[/green]\n"
         )
         console.print(format_extraction_result(result))
 

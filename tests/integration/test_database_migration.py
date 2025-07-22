@@ -52,14 +52,14 @@ class TestDatabaseMigration:
 
         for table in required_tables:
             pattern = rf"CREATE TABLE IF NOT EXISTS {table}"
-            assert re.search(pattern, sql_content, re.IGNORECASE), (
-                f"Missing table: {table}"
-            )
+            assert re.search(
+                pattern, sql_content, re.IGNORECASE
+            ), f"Missing table: {table}"
 
         # Check for halfvec column type with parameterized dimension
-        assert "halfvec(${VECTOR_DIMENSION})" in sql_content, (
-            "Missing parameterized halfvec column type"
-        )
+        assert (
+            "halfvec(${VECTOR_DIMENSION})" in sql_content
+        ), "Missing parameterized halfvec column type"
 
         # Check for HNSW index
         assert "USING hnsw" in sql_content, "Missing HNSW index"

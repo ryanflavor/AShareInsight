@@ -38,15 +38,19 @@ class BuildVectorIndexUseCase:
             repository: Repository for business concept master data operations
             embedding_service: Service for generating embeddings
             vectorization_service: Service for preparing text for vectorization
-            batch_size: Number of concepts to process in each batch (defaults to embedding service config)
+            batch_size: Number of concepts to process in each batch
+                (defaults to embedding service config)
         """
         self.repository = repository
         self.embedding_service = embedding_service
         self.vectorization_service = vectorization_service
-        # Use vectorization service's qwen_settings if available, otherwise default to 50
-        default_batch_size = getattr(
-            self.vectorization_service, 'qwen_settings', None
-        ) and self.vectorization_service.qwen_settings.qwen_max_batch_size or 50
+        # Use vectorization service's qwen_settings if available,
+        # otherwise default to 50
+        default_batch_size = (
+            getattr(self.vectorization_service, "qwen_settings", None)
+            and self.vectorization_service.qwen_settings.qwen_max_batch_size
+            or 50
+        )
         self.batch_size = batch_size or default_batch_size
 
     async def execute(

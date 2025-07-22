@@ -14,7 +14,7 @@ class AShareInsightError(Exception):
     pass
 
 
-class AShareInsightException(AShareInsightError):
+class AShareInsightException(AShareInsightError):  # noqa: N818
     """Base exception for all AShareInsight custom exceptions with detailed info."""
 
     def __init__(

@@ -205,13 +205,13 @@ class BatchExtractDocumentsUseCase:
                 archive_use_case = None
                 if not self.skip_archive:
                     try:
-                        from src.application.use_cases.archive_extraction_result import (
+                        from src.application.use_cases.archive_extraction_result import (  # noqa: E501
                             ArchiveExtractionResultUseCase,
                         )
                         from src.infrastructure.persistence.postgres.connection import (
                             get_session,
                         )
-                        from src.infrastructure.persistence.postgres.source_document_repository import (
+                        from src.infrastructure.persistence.postgres.source_document_repository import (  # noqa: E501
                             PostgresSourceDocumentRepository,
                         )
 

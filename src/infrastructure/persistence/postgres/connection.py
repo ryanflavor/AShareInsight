@@ -89,7 +89,9 @@ class DatabaseConnection:
         if self._session_factory is None:
             await self.initialize()
 
-        assert self._session_factory is not None  # Type narrowing for mypy
+        assert (  # noqa: S101
+            self._session_factory is not None
+        )  # Type narrowing for mypy
         async with self._session_factory() as session:
             try:
                 yield session

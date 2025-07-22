@@ -33,11 +33,11 @@ class TextDocumentLoader(BaseDocumentLoader):
                     continue
             raise DocumentProcessingError(
                 f"Failed to decode file {file_path} with any supported encoding"
-            )
+            ) from None
         except Exception as e:
             raise DocumentProcessingError(
                 f"Failed to read text file {file_path}: {str(e)}"
-            )
+            ) from e
 
 
 class MarkdownDocumentLoader(BaseDocumentLoader):
@@ -66,8 +66,8 @@ class MarkdownDocumentLoader(BaseDocumentLoader):
                     continue
             raise DocumentProcessingError(
                 f"Failed to decode file {file_path} with any supported encoding"
-            )
+            ) from None
         except Exception as e:
             raise DocumentProcessingError(
                 f"Failed to read markdown file {file_path}: {str(e)}"
-            )
+            ) from e

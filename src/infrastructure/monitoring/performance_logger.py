@@ -154,9 +154,9 @@ class PerformanceMetrics:
                 "average_docs_per_request": self.get_average_docs_per_rerank(),
             },
             "uptime_seconds": self.get_uptime_seconds(),
-            # Use UTC from datetime for Python 3.9+ compatibility
+            # Use UTC timezone for compatibility
             "timestamp": datetime.now(
-                datetime.UTC if hasattr(datetime, "UTC") else datetime.timezone.utc
+                getattr(datetime, "UTC", None) or __import__("datetime").timezone.utc
             ).isoformat(),
         }
 

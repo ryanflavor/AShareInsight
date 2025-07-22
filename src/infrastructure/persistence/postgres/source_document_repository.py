@@ -175,7 +175,12 @@ class PostgresSourceDocumentRepository(SourceDocumentRepositoryPort):
                             # Update exchange
                             new_exchange = extraction_data.get("exchange")
                             if is_better_quality(
-                                existing_company.exchange, new_exchange
+                                (
+                                    str(existing_company.exchange)
+                                    if existing_company.exchange
+                                    else None
+                                ),
+                                new_exchange,
                             ):
                                 existing_company.exchange = new_exchange
                                 update_needed = True
@@ -184,7 +189,12 @@ class PostgresSourceDocumentRepository(SourceDocumentRepositoryPort):
                             # Update company short name
                             new_short_name = extraction_data.get("company_name_short")
                             if is_better_quality(
-                                existing_company.company_name_short, new_short_name
+                                (
+                                    str(existing_company.company_name_short)
+                                    if existing_company.company_name_short
+                                    else None
+                                ),
+                                new_short_name,
                             ):
                                 existing_company.company_name_short = new_short_name
                                 update_needed = True
@@ -193,7 +203,12 @@ class PostgresSourceDocumentRepository(SourceDocumentRepositoryPort):
                             # Update company full name
                             new_full_name = extraction_data.get("company_name_full")
                             if is_better_quality(
-                                existing_company.company_name_full, new_full_name
+                                (
+                                    str(existing_company.company_name_full)
+                                    if existing_company.company_name_full
+                                    else None
+                                ),
+                                new_full_name,
                             ):
                                 existing_company.company_name_full = new_full_name
                                 update_needed = True
@@ -252,7 +267,7 @@ class PostgresSourceDocumentRepository(SourceDocumentRepositoryPort):
                     f"Document with file_hash {document.file_hash} already exists",
                     params=None,
                     orig=e,
-                )
+                ) from e
             elif "fk_source_documents_company_code" in str(e):
                 logger.error(
                     "invalid_company_code",
@@ -262,7 +277,7 @@ class PostgresSourceDocumentRepository(SourceDocumentRepositoryPort):
                     f"Invalid company_code: {document.company_code}",
                     params=None,
                     orig=e,
-                )
+                ) from e
             else:
                 raise
 

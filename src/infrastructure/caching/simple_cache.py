@@ -143,9 +143,9 @@ class SimpleCache:
             "max_size": self._max_size,
             "default_ttl_seconds": self._default_ttl,
             "last_cleanup": datetime.fromtimestamp(last_cleanup).isoformat(),
-            "utilization_percent": round(size / self._max_size * 100, 2)
-            if self._max_size > 0
-            else 0,
+            "utilization_percent": (
+                round(size / self._max_size * 100, 2) if self._max_size > 0 else 0
+            ),
         }
 
 

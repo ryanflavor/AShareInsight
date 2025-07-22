@@ -142,7 +142,7 @@ class BusinessConceptMaster(BaseModel):
         current_sentences = self.concept_details.get("source_sentences", [])
 
         # Use ordered dict to maintain order while deduplicating
-        merged = {}
+        merged: dict[str, None] = {}
         for sentence in current_sentences + new_sentences:
             merged[sentence] = None
 

@@ -24,9 +24,9 @@ _reranker: RerankerPort | None = None
 _market_data_repository: MarketDataRepository | None = None
 
 
-async def get_vector_store_repository() -> AsyncGenerator[
-    PostgresVectorStoreRepository
-]:
+async def get_vector_store_repository() -> (
+    AsyncGenerator[PostgresVectorStoreRepository]
+):
     """Get the vector store repository instance.
 
     This dependency provides a singleton repository instance that
@@ -112,9 +112,13 @@ async def get_market_data_repository() -> AsyncGenerator[MarketDataRepository]:
 
 
 async def get_search_similar_companies_use_case(
-    vector_store: PostgresVectorStoreRepository = Depends(get_vector_store_repository),  # noqa: B008
+    vector_store: PostgresVectorStoreRepository = Depends(  # noqa: B008
+        get_vector_store_repository
+    ),
     reranker: RerankerPort | None = Depends(get_reranker),  # noqa: B008
-    market_data_repository: MarketDataRepository = Depends(get_market_data_repository),  # noqa: B008
+    market_data_repository: MarketDataRepository = Depends(  # noqa: B008
+        get_market_data_repository
+    ),
 ) -> SearchSimilarCompaniesUseCase:
     """Get the search similar companies use case.
 
@@ -144,7 +148,9 @@ async def shutdown_dependencies():
 
     if _reranker:
         try:
-            await _reranker.close()
+            # Only call close if the reranker has a close method
+            if hasattr(_reranker, "close") and callable(_reranker.close):
+                await _reranker.close()
             _reranker = None
             logger.info("Closed reranker connections")
         except Exception as e:

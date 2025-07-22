@@ -1,7 +1,7 @@
 """Infrastructure-specific exceptions for the AShareInsight application."""
 
 
-class InfrastructureException(Exception):
+class InfrastructureException(Exception):  # noqa: N818
     """Base exception for all infrastructure-related errors."""
 
     pass

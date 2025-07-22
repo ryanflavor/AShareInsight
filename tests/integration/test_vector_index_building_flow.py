@@ -88,9 +88,9 @@ class TestVectorIndexBuildingFlow:
     ):
         """Test the complete flow from document processing to vector generation."""
         # Setup mocks
-        mock_repositories[
-            "source_doc_repo"
-        ].find_by_id.return_value = sample_source_document
+        mock_repositories["source_doc_repo"].find_by_id.return_value = (
+            sample_source_document
+        )
         mock_repositories[
             "business_concept_repo"
         ].find_by_company_and_name.return_value = None
@@ -122,9 +122,9 @@ class TestVectorIndexBuildingFlow:
             )
             created_concepts.append(concept)
 
-        mock_services[
-            "data_fusion_service"
-        ].create_from_new_concept.side_effect = created_concepts
+        mock_services["data_fusion_service"].create_from_new_concept.side_effect = (
+            created_concepts
+        )
         mock_repositories["business_concept_repo"].save.side_effect = created_concepts
 
         # Mock embedding service
@@ -202,9 +202,9 @@ class TestVectorIndexBuildingFlow:
     ):
         """Test async vectorization triggered after document processing."""
         # Setup mocks
-        mock_repositories[
-            "source_doc_repo"
-        ].find_by_id.return_value = sample_source_document
+        mock_repositories["source_doc_repo"].find_by_id.return_value = (
+            sample_source_document
+        )
         mock_repositories[
             "business_concept_repo"
         ].find_by_company_and_name.return_value = None
@@ -212,9 +212,9 @@ class TestVectorIndexBuildingFlow:
         # Mock concept creation
         created_concept = MagicMock()
         created_concept.concept_id = uuid4()
-        mock_services[
-            "data_fusion_service"
-        ].create_from_new_concept.return_value = created_concept
+        mock_services["data_fusion_service"].create_from_new_concept.return_value = (
+            created_concept
+        )
         mock_repositories["business_concept_repo"].save.return_value = created_concept
 
         # Mock for async vectorization

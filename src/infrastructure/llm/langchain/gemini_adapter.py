@@ -15,10 +15,10 @@ from tenacity import (
     wait_exponential,
 )
 
-logger = structlog.get_logger(__name__)
-
 from src.infrastructure.llm.langchain.base import LangChainBase, LangChainConfig
 from src.shared.exceptions import LLMServiceError
+
+logger = structlog.get_logger(__name__)
 
 
 class GeminiAdapter(LangChainBase):
@@ -179,7 +179,7 @@ class GeminiAdapter(LangChainBase):
                 error=str(e),
                 traceback=traceback.format_exc(),
             )
-            raise LLMServiceError(f"Failed to invoke Gemini model: {str(e)}")
+            raise LLMServiceError(f"Failed to invoke Gemini model: {str(e)}") from e
 
     async def ainvoke(self, messages: list[BaseMessage], **kwargs: Any) -> ChatResult:
         """Async invoke Gemini model with retry logic.
@@ -226,7 +226,9 @@ class GeminiAdapter(LangChainBase):
 
         except Exception as e:
             logger.error("Failed to stream from Gemini model", error=str(e))
-            raise LLMServiceError(f"Failed to stream from Gemini model: {str(e)}")
+            raise LLMServiceError(
+                f"Failed to stream from Gemini model: {str(e)}"
+            ) from e
 
     def _log_invocation_metadata(
         self, model: str, elapsed_time: float, success: bool, error: str | None = None

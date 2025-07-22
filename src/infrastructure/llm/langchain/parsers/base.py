@@ -110,14 +110,14 @@ class BaseOutputParser[T: BaseModel](ABC):
             raise LLMServiceError(
                 f"Failed to parse JSON: {str(e)}. "
                 f"Extracted content: {json_str[:200]}..."
-            )
+            ) from e
         except ValidationError as e:
             raise LLMServiceError(
                 f"Validation failed: {str(e)}. "
                 "The JSON structure doesn't match the expected schema."
-            )
+            ) from e
         except Exception as e:
-            raise LLMServiceError(f"Unexpected error during parsing: {str(e)}")
+            raise LLMServiceError(f"Unexpected error during parsing: {str(e)}") from e
 
     def parse_with_fallback(
         self, text: str, fallback_value: Any | None = None
