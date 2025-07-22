@@ -89,8 +89,8 @@ class GeminiLLMAdapter(LLMServicePort):
                 # Get prompt template and format with document
                 prompt_text = self.annual_report_prompt.format(
                     document_content=document_content,
-                    company_name="未知公司",  # Default since not in metadata
-                    document_type="年度报告",  # Default document type
+                    company_name=self.settings.llm.default_company_name,  # Configurable default
+                    document_type=self.settings.llm.default_annual_report_type,  # Configurable default
                 )
 
                 # Create messages
@@ -238,7 +238,7 @@ class GeminiLLMAdapter(LLMServicePort):
                 # Get prompt template and format with document
                 prompt_text = self.research_report_prompt.format(
                     document_content=document_content,
-                    report_title="研究报告",  # Default since not in metadata
+                    report_title=self.settings.llm.default_research_report_type,  # Configurable default
                 )
 
                 # Create messages

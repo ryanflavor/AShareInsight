@@ -17,6 +17,21 @@ class LLMSettings(BaseSettings):
     gemini_timeout: int = 180  # 3 minutes
     gemini_max_retries: int = 3
 
+    # Retry logic settings
+    gemini_retry_multiplier: int = 1
+    gemini_retry_wait_min: int = 60  # seconds
+    gemini_retry_wait_max: int = 180  # seconds
+
+    # Default text constants
+    default_company_name: str = "未知公司"
+    default_annual_report_type: str = "年度报告"
+    default_research_report_type: str = "研究报告"
+
+    # HTTP connection settings
+    http_keepalive_expiry: float = 30.0  # seconds
+    http_connect_timeout: float = 10.0  # seconds
+    http_write_timeout: float = 10.0  # seconds
+
     # Batch processing settings
     batch_size: int = 10  # Number of concurrent LLM calls
     rate_limit_per_minute: int = 30  # API rate limit

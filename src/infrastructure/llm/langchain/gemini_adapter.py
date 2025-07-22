@@ -33,11 +33,6 @@ class GeminiAdapter(LangChainBase):
         super().__init__(config)
         self.llm = self.get_llm()
 
-    @retry(
-        retry=retry_if_exception_type((APITimeoutError, RateLimitError)),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=60, max=180),
-    )
     def invoke(self, messages: list[BaseMessage], **kwargs: Any) -> ChatResult:
         """Invoke Gemini model with retry logic.
 
@@ -51,6 +46,28 @@ class GeminiAdapter(LangChainBase):
         Raises:
             LLMServiceError: If the request fails after all retries.
         """
+        # Create retry decorator with configuration values
+        retry_decorator = retry(
+            retry=retry_if_exception_type((APITimeoutError, RateLimitError)),
+            stop=stop_after_attempt(self.config.max_retries),
+            wait=wait_exponential(
+                multiplier=self.config.retry_multiplier,
+                min=self.config.retry_wait_min,
+                max=self.config.retry_wait_max,
+            ),
+        )
+
+        # Apply retry logic to the internal method
+        @retry_decorator
+        def _invoke_with_retry():
+            return self._invoke_internal(messages, **kwargs)
+
+        return _invoke_with_retry()
+
+    def _invoke_internal(
+        self, messages: list[BaseMessage], **kwargs: Any
+    ) -> ChatResult:
+        """Internal invoke method with actual LLM call logic."""
         start_time = time.time()
 
         try:

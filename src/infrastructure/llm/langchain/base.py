@@ -29,6 +29,17 @@ class LangChainConfig(BaseModel):
     )
     retry_delay: int = Field(default=60)  # 60 seconds between retries
 
+    # Retry configuration
+    retry_multiplier: int = Field(
+        default_factory=lambda: get_settings().llm.gemini_retry_multiplier
+    )
+    retry_wait_min: int = Field(
+        default_factory=lambda: get_settings().llm.gemini_retry_wait_min
+    )
+    retry_wait_max: int = Field(
+        default_factory=lambda: get_settings().llm.gemini_retry_wait_max
+    )
+
 
 class LangChainBase:
     """Base class for LangChain integrations."""
@@ -69,17 +80,18 @@ class LangChainBase:
         if self._llm is None:
             # Configure HTTP client with connection pooling (only once)
             if self._http_client is None:
+                settings = get_settings()
                 self._http_client = httpx.Client(
                     limits=httpx.Limits(
-                        max_keepalive_connections=get_settings().llm.connection_pool_size,
-                        max_connections=get_settings().llm.connection_pool_size * 2,
-                        keepalive_expiry=30.0,  # Keep connections alive for 30 seconds
+                        max_keepalive_connections=settings.llm.connection_pool_size,
+                        max_connections=settings.llm.connection_pool_size * 2,
+                        keepalive_expiry=settings.llm.http_keepalive_expiry,  # Configurable keepalive
                     ),
                     timeout=httpx.Timeout(
                         timeout=float(self.config.timeout),
-                        connect=10.0,  # Connection timeout
+                        connect=settings.llm.http_connect_timeout,  # Configurable connection timeout
                         read=float(self.config.timeout),  # Read timeout
-                        write=10.0,  # Write timeout
+                        write=settings.llm.http_write_timeout,  # Configurable write timeout
                     ),
                 )
 
