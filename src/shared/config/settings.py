@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -72,9 +72,14 @@ class DatabaseSettings(BaseSettings):
 
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    postgres_db: str = "ashareinsight"
-    postgres_user: str = "postgres"
-    postgres_password: SecretStr = SecretStr("")
+    postgres_db: str = "ashareinsight_db"
+    postgres_user: str = "ashareinsight"
+    postgres_password: SecretStr = SecretStr("ashareinsight_password")
+
+    # Connection pool settings
+    db_pool_min_size: int = Field(default=5)
+    db_pool_max_size: int = Field(default=20)
+    db_pool_timeout: float = Field(default=30.0)
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
@@ -87,6 +92,20 @@ class DatabaseSettings(BaseSettings):
             f"postgresql://{self.postgres_user}:{self.postgres_password.get_secret_value()}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def postgres_dsn(self) -> str:
+        """Get PostgreSQL connection string for async."""
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:"
+            f"{self.postgres_password.get_secret_value()}@"
+            f"{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
+    def postgres_dsn_sync(self) -> str:
+        """Get synchronous PostgreSQL connection string."""
+        return self.database_url
 
 
 class MonitoringSettings(BaseSettings):
@@ -128,6 +147,51 @@ class FusionSettings(BaseSettings):
         return {cat.strip() for cat in self.allowed_concept_categories.split(",")}
 
 
+class APISettings(BaseSettings):
+    """API-specific settings."""
+
+    # API settings
+    api_host: str = Field(default="127.0.0.1")
+    api_port: int = Field(default=8000)
+    api_reload: bool = Field(default=True)
+
+    # Search settings
+    default_similarity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    default_top_k: int = Field(default=50, ge=1, le=100)
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
+    )
+
+
+class RerankerSettings(BaseSettings):
+    """Reranker service settings."""
+
+    # Reranker settings
+    reranker_enabled: bool = Field(default=True)
+    reranker_service_url: str = Field(default="http://localhost:9547")
+    reranker_timeout_seconds: float = Field(default=5.0, ge=0.1, le=30.0)
+    reranker_max_retries: int = Field(default=2, ge=0, le=5)
+    reranker_retry_backoff: float = Field(default=0.5, ge=0.1, le=5.0)
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
+    )
+
+
+class CacheSettings(BaseSettings):
+    """Cache settings."""
+
+    # Redis settings (for future caching)
+    redis_host: str = Field(default="localhost")
+    redis_port: int = Field(default=6379)
+    redis_db: int = Field(default=0)
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
+    )
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -142,6 +206,9 @@ class Settings(BaseSettings):
     database: DatabaseSettings = DatabaseSettings()
     monitoring: MonitoringSettings = MonitoringSettings()
     fusion: FusionSettings = FusionSettings()
+    api: APISettings = APISettings()
+    reranker: RerankerSettings = RerankerSettings()
+    cache: CacheSettings = CacheSettings()
 
     # Feature flags
     debug_mode: bool = False
@@ -164,3 +231,7 @@ def get_settings() -> Settings:
         Settings instance with all configuration loaded.
     """
     return Settings()
+
+
+# Global settings instance for convenience
+settings = get_settings()

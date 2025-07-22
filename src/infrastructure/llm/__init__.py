@@ -1,4 +1,4 @@
-"""LLM infrastructure module."""
+"""LLM infrastructure adapters."""
 
 from .gemini_llm_adapter import GeminiLLMAdapter
 

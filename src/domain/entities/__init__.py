@@ -1,5 +1,6 @@
-"""Domain entities package."""
+"""Domain entities for AShareInsight."""
 
+from .business_concept import BusinessConcept as BusinessConceptEntity
 from .company import (
     AnnualReportExtraction,
     BusinessConcept,
@@ -32,6 +33,7 @@ __all__ = [
     "Metrics",
     "Relations",
     "BusinessConcept",
+    "BusinessConceptEntity",
     "AnnualReportExtraction",
     # Research report entities
     "ProfitForecast",
