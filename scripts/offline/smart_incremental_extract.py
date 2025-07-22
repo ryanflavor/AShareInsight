@@ -30,6 +30,8 @@ from src.infrastructure.persistence.postgres.source_document_repository import (
     PostgresSourceDocumentRepository,
 )
 from src.shared.config.settings import Settings
+from pydantic import SecretStr
+import os
 
 logger = structlog.get_logger()
 console = Console()
@@ -40,6 +42,7 @@ class SmartIncrementalExtractor:
 
     def __init__(self):
         self.settings = Settings()
+        self.settings.llm.gemini_api_key = SecretStr(os.getenv("GEMINI_API_KEY"))
         self.llm_service = GeminiLLMAdapter(self.settings)
         self.company_extractor = CompanyInfoExtractor()
 

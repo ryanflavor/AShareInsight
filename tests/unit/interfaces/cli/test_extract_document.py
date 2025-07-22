@@ -30,7 +30,10 @@ def mock_settings():
     with patch("src.interfaces.cli.extract_document.Settings") as mock:
         settings = MagicMock()
         mock_llm = MagicMock()
-        mock_llm.gemini_api_key = "test-api-key"
+        # Fix: Use SecretStr instead of plain string for API key
+        from pydantic import SecretStr
+
+        mock_llm.gemini_api_key = SecretStr("test-api-key")
         mock_llm.gemini_base_url = "https://test.api.com"
         settings.llm = mock_llm
         mock.return_value = settings
@@ -239,7 +242,10 @@ class TestExtractDocumentCLI:
 
         with patch("src.interfaces.cli.extract_document.Settings") as mock_settings:
             mock_llm_settings = MagicMock()
-            mock_llm_settings.gemini_api_key = None
+            # Fix: Use empty SecretStr instead of None
+            from pydantic import SecretStr
+
+            mock_llm_settings.gemini_api_key = SecretStr("")
             mock_settings.return_value.llm = mock_llm_settings
 
             result = cli_runner.invoke(

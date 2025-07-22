@@ -332,7 +332,7 @@ class TestBusinessConcept:
 
     def test_source_sentences_validation(self):
         """Test source sentences length validation."""
-        # Valid: 2-3 sentences
+        # Valid: 1-10 sentences
         BusinessConcept(
             concept_name="Test",
             concept_category="核心业务",
@@ -341,7 +341,7 @@ class TestBusinessConcept:
             development_stage="成长期",
             timeline=Timeline(),
             relations=Relations(),
-            source_sentences=["s1", "s2"],
+            source_sentences=["s1"],
         )
 
         BusinessConcept(
@@ -355,7 +355,7 @@ class TestBusinessConcept:
             source_sentences=["s1", "s2", "s3"],
         )
 
-        # Invalid: too few
+        # Invalid: empty list (0 sentences)
         with pytest.raises(ValidationError):
             BusinessConcept(
                 concept_name="Test",
@@ -365,10 +365,10 @@ class TestBusinessConcept:
                 development_stage="成长期",
                 timeline=Timeline(),
                 relations=Relations(),
-                source_sentences=["s1"],
+                source_sentences=[],
             )
 
-        # Invalid: too many
+        # Invalid: too many (>10 sentences)
         with pytest.raises(ValidationError):
             BusinessConcept(
                 concept_name="Test",
@@ -378,7 +378,19 @@ class TestBusinessConcept:
                 development_stage="成长期",
                 timeline=Timeline(),
                 relations=Relations(),
-                source_sentences=["s1", "s2", "s3", "s4"],
+                source_sentences=[
+                    "s1",
+                    "s2",
+                    "s3",
+                    "s4",
+                    "s5",
+                    "s6",
+                    "s7",
+                    "s8",
+                    "s9",
+                    "s10",
+                    "s11",
+                ],
             )
 
 

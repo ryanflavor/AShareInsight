@@ -252,7 +252,13 @@ class TestCompanyReport:
             business_concepts=[
                 {
                     "concept_name": "Main Business",
+                    "concept_category": "核心业务",
                     "description": "Core operations",
+                    "importance_score": 0.8,
+                    "development_stage": "成熟期",
+                    "timeline": {},
+                    "relations": {},
+                    "source_sentences": ["Test sentence 1", "Test sentence 2"],
                 }
             ],
         )

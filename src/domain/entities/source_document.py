@@ -180,4 +180,5 @@ class SourceDocumentMetadata(BaseModel):
             report_title=report_title,
             file_path=document_metadata.get("file_path"),
             file_hash=document_metadata.get("file_hash"),
+            original_content=document_metadata.get("original_content"),
         )

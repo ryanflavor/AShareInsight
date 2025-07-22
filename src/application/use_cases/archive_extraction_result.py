@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from src.application.ports.source_document_repository import (
     SourceDocumentRepositoryPort,
 )
+from src.application.use_cases.update_master_data import UpdateMasterDataUseCase
 from src.domain.entities.source_document import SourceDocument, SourceDocumentMetadata
 
 logger = structlog.get_logger(__name__)
@@ -24,13 +25,19 @@ logger = structlog.get_logger(__name__)
 class ArchiveExtractionResultUseCase:
     """Use case for archiving LLM extraction results to the database."""
 
-    def __init__(self, repository: SourceDocumentRepositoryPort):
+    def __init__(
+        self,
+        repository: SourceDocumentRepositoryPort,
+        update_master_data_use_case: UpdateMasterDataUseCase | None = None,
+    ):
         """Initialize the use case with repository dependency.
 
         Args:
             repository: The source document repository implementation
+            update_master_data_use_case: Optional use case for updating master data
         """
         self.repository = repository
+        self.update_master_data_use_case = update_master_data_use_case
 
     async def execute(
         self,
@@ -167,6 +174,37 @@ class ArchiveExtractionResultUseCase:
                 file_hash=doc_metadata.file_hash,
                 raw_output_size=len(json.dumps(raw_llm_output)),
             )
+
+            # Trigger master data fusion if use case is available
+            if self.update_master_data_use_case:
+                try:
+                    logger.info(
+                        "triggering_master_data_fusion",
+                        trace_id=trace_id,
+                        doc_id=str(doc_id),
+                        company_code=doc_metadata.company_code,
+                    )
+
+                    fusion_stats = await self.update_master_data_use_case.execute(
+                        doc_id
+                    )
+
+                    logger.info(
+                        "master_data_fusion_completed",
+                        trace_id=trace_id,
+                        doc_id=str(doc_id),
+                        **fusion_stats,
+                    )
+                except Exception as e:
+                    # Log fusion error but don't fail the archival
+                    logger.error(
+                        "master_data_fusion_failed",
+                        trace_id=trace_id,
+                        doc_id=str(doc_id),
+                        error=str(e),
+                        error_type=type(e).__name__,
+                    )
+                    # Fusion failures should not affect archival success
 
             return doc_id
 
@@ -330,6 +368,7 @@ class ArchiveExtractionResultUseCase:
             report_title=metadata.get("report_title"),
             file_path=metadata.get("file_path"),
             file_hash=metadata.get("file_hash"),
+            original_content=metadata.get("original_content"),
         )
 
     def _calculate_hash(self, data: dict[str, Any]) -> str:
