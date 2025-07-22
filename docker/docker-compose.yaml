@@ -23,18 +23,18 @@ services:
     command: >
       postgres
       -c shared_preload_libraries='vector'
-      -c max_connections=200
-      -c shared_buffers=256MB
-      -c effective_cache_size=1GB
-      -c maintenance_work_mem=64MB
-      -c checkpoint_completion_target=0.7
-      -c wal_buffers=16MB
-      -c default_statistics_target=100
-      -c random_page_cost=1.1
-      -c effective_io_concurrency=200
-      -c work_mem=4MB
-      -c min_wal_size=1GB
-      -c max_wal_size=2GB
+      -c max_connections=${POSTGRES_MAX_CONNECTIONS:-200}
+      -c shared_buffers=${POSTGRES_SHARED_BUFFERS:-256MB}
+      -c effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-1GB}
+      -c maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-64MB}
+      -c checkpoint_completion_target=${POSTGRES_CHECKPOINT_COMPLETION_TARGET:-0.7}
+      -c wal_buffers=${POSTGRES_WAL_BUFFERS:-16MB}
+      -c default_statistics_target=${POSTGRES_DEFAULT_STATISTICS_TARGET:-100}
+      -c random_page_cost=${POSTGRES_RANDOM_PAGE_COST:-1.1}
+      -c effective_io_concurrency=${POSTGRES_EFFECTIVE_IO_CONCURRENCY:-200}
+      -c work_mem=${POSTGRES_WORK_MEM:-4MB}
+      -c min_wal_size=${POSTGRES_MIN_WAL_SIZE:-1GB}
+      -c max_wal_size=${POSTGRES_MAX_WAL_SIZE:-2GB}
 
   adminer:
     image: adminer:latest
@@ -56,7 +56,7 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --maxmemory ${REDIS_MAX_MEMORY:-256mb} --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
     volumes:
       - redis_data:/data
     healthcheck:

@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS business_concepts_master (
     concept_category VARCHAR(50) NOT NULL CHECK (concept_category IN ('product', 'service', 'technology', 'business_model', 'market', 'strategy', 'other')),
     importance_score DECIMAL(3,2) NOT NULL CHECK (importance_score >= 0 AND importance_score <= 1),
     development_stage VARCHAR(50) CHECK (development_stage IN ('concept', 'development', 'pilot', 'commercialization', 'mature', 'declining')),
-    embedding halfvec(2560) NOT NULL,
+    embedding halfvec(${VECTOR_DIMENSION}) NOT NULL,
     concept_details JSONB NOT NULL,
     last_updated_from_doc_id UUID REFERENCES source_documents(doc_id) ON DELETE SET NULL,
     version INTEGER DEFAULT 1,
@@ -83,7 +83,7 @@ CREATE INDEX idx_concepts_active ON business_concepts_master(is_active) WHERE is
 -- Using cosine distance for similarity calculation
 CREATE INDEX idx_concepts_embedding ON business_concepts_master 
 USING hnsw (embedding halfvec_cosine_ops)
-WITH (m = 16, ef_construction = 64);
+WITH (m = ${HNSW_M}, ef_construction = ${HNSW_EF_CONSTRUCTION});
 
 -- Create trigger for business_concepts_master updated_at
 CREATE TRIGGER update_business_concepts_updated_at BEFORE UPDATE
@@ -122,7 +122,7 @@ WHERE bc.is_active = true;
 
 -- Create a function to search similar concepts using vector similarity
 CREATE OR REPLACE FUNCTION search_similar_concepts(
-    query_embedding halfvec(2560),
+    query_embedding halfvec(${VECTOR_DIMENSION}),
     similarity_threshold float DEFAULT 0.7,
     limit_results int DEFAULT 10
 )

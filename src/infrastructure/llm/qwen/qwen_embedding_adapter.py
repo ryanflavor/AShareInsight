@@ -32,6 +32,7 @@ class QwenEmbeddingConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     base_url: str
+    model_name: str
     timeout: int
     max_batch_size: int
     normalize: bool
@@ -45,6 +46,7 @@ class QwenEmbeddingConfig(BaseModel):
         """Create config from settings object."""
         return cls(
             base_url=settings.qwen_base_url,
+            model_name=settings.qwen_model_name,
             timeout=settings.qwen_timeout,
             max_batch_size=settings.qwen_max_batch_size,
             normalize=settings.qwen_normalize,
@@ -56,7 +58,7 @@ class QwenEmbeddingConfig(BaseModel):
 
 
 class QwenEmbeddingAdapter(EmbeddingServicePort):
-    """Adapter for Qwen3-Embedding-4B model service.
+    """Adapter for Qwen embedding model service.
 
     This adapter implements the EmbeddingServicePort interface using
     the locally deployed Qwen embedding service API.
@@ -274,7 +276,7 @@ class QwenEmbeddingAdapter(EmbeddingServicePort):
         Returns:
             The model name.
         """
-        return "Qwen3-Embedding-4B"
+        return self.config.model_name
 
     async def health_check(self) -> bool:
         """Check if the embedding service is healthy and ready.

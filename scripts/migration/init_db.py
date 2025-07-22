@@ -37,12 +37,65 @@ class DatabaseSettings(BaseSettings):
         )
 
 
+class ConfigurationLoader:
+    """Loads application configuration for migration parameters."""
+
+    def __init__(self):
+        self.config = self._load_config()
+
+    def _load_config(self) -> dict:
+        """Load configuration from YAML file."""
+        import os
+
+        import yaml
+
+        # Default to development config
+        config_file = os.environ.get("CONFIG_FILE", "development.yaml")
+        config_path = Path(__file__).parent.parent.parent / "config" / config_file
+
+        if not config_path.exists():
+            # Fallback to development.yaml if specified config doesn't exist
+            config_path = (
+                Path(__file__).parent.parent.parent / "config" / "development.yaml"
+            )
+
+        if config_path.exists():
+            with open(config_path, encoding="utf-8") as f:
+                return yaml.safe_load(f)
+
+        # Return default values if no config file exists
+        return {
+            "models": {"embedding": {"dimension": 2560}},
+            "vector_store": {"index": {"m": 16, "ef_construction": 64}},
+        }
+
+    @property
+    def vector_dimension(self) -> int:
+        """Get vector embedding dimension."""
+        return self.config.get("models", {}).get("embedding", {}).get("dimension", 2560)
+
+    @property
+    def hnsw_m(self) -> int:
+        """Get HNSW index m parameter."""
+        return self.config.get("vector_store", {}).get("index", {}).get("m", 16)
+
+    @property
+    def hnsw_ef_construction(self) -> int:
+        """Get HNSW index ef_construction parameter."""
+        return (
+            self.config.get("vector_store", {})
+            .get("index", {})
+            .get("ef_construction", 64)
+        )
+
+
 class MigrationRunner:
     """Handles database migration execution."""
 
     def __init__(self, settings: DatabaseSettings):
         self.settings = settings
         self.migration_dir = Path(__file__).parent
+        self.config_loader = ConfigurationLoader()
 
     def get_connection(self) -> psycopg.Connection:
         """Create database connection."""
@@ -82,10 +135,24 @@ class MigrationRunner:
             return None
 
     def run_migration(self, migration_file: Path) -> None:
-        """Execute a single migration file."""
+        """Execute a single migration file with parameter substitution."""
 
-        with open(migration_file) as f:
+        with open(migration_file, encoding="utf-8") as f:
             sql_content = f.read()
+
+        # Substitute configuration parameters
+        import re
+
+        # Replace ${VARIABLE_NAME} patterns with actual values
+        replacements = {
+            "VECTOR_DIMENSION": str(self.config_loader.vector_dimension),
+            "HNSW_M": str(self.config_loader.hnsw_m),
+            "HNSW_EF_CONSTRUCTION": str(self.config_loader.hnsw_ef_construction),
+        }
+
+        for var_name, value in replacements.items():
+            pattern = r"\$\{" + re.escape(var_name) + r"\}"
+            sql_content = re.sub(pattern, value, sql_content)
 
         with self.get_connection() as conn:
             with conn.cursor() as cur:
