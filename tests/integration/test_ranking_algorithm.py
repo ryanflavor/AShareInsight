@@ -360,4 +360,11 @@ class TestCompleteRankingFlow:
 
         # Verify all results maintain the same source concept ID
         expected_source_id = UUID("87654321-4321-8765-4321-876543218765")
-        assert all(doc.source_concept_id == expected_source_id for doc in results)
+        # Check source_concept_id in the matched concepts of each aggregated company
+        assert all(
+            all(
+                concept.source_concept_id == expected_source_id
+                for concept in company.matched_concepts
+            )
+            for company in results
+        )
