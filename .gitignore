@@ -128,3 +128,4 @@ uv.lock
 !.env.example
 
 reserved/
+data/
