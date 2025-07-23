@@ -98,9 +98,21 @@ async def create_standalone_fusion_use_case() -> UpdateMasterDataUseCase:
     class SessionManagedUpdateMasterDataUseCase(UpdateMasterDataUseCase):
         def __init__(self, session_factory: SessionFactory):
             self.session_factory = session_factory
-            self.data_fusion_service = DataFusionService()
-            self.batch_size = 50  # Set default batch size
             # Don't call super().__init__ yet as we need dynamic repositories
+
+            # Initialize all required attributes from parent class
+            from src.shared.config.settings import get_settings
+
+            settings = get_settings()
+            self.data_fusion_service = DataFusionService()
+            self.embedding_service = None  # Not needed for fusion only
+            self.vectorization_service = None  # Not needed for fusion only
+            self.batch_size = settings.fusion.fusion_batch_size
+            self.batch_delay = settings.fusion.fusion_batch_delay_seconds
+            self.max_retries = settings.fusion.fusion_max_retries
+            self.retry_base_delay = settings.fusion.fusion_retry_base_delay
+            self.enable_async_vectorization = False  # Disable for fusion-only
+            self.vector_index_use_case = None  # Not needed for fusion only
 
         async def execute(self, doc_id: UUID) -> dict[str, Any]:
             """Execute with proper session management."""

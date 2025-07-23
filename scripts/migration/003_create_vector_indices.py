@@ -181,7 +181,7 @@ def main():
     )
 
     # Load environment variables
-    load_dotenv()
+    load_dotenv(override=True)
 
     try:
         if args.rollback:

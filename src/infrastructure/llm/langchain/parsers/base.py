@@ -31,13 +31,50 @@ class MarkdownExtractor:
         Raises:
             LLMServiceError: If no valid JSON can be extracted.
         """
+        # First, check if there's a <think> section and skip it
+        think_end = text.find("</think>")
+        if think_end != -1:
+            # Use only the text after the thinking section
+            text = text[think_end + len("</think>") :]
+
         # First, try to find JSON in markdown code blocks
         # Pattern matches ```json or ```JSON followed by content and closing ```
-        json_block_pattern = r"```(?:json|JSON)\s*\n([\s\S]*?)\n```"
+        # Note: Allow optional whitespace after json/JSON and handle different newline formats
+        json_block_pattern = r"```(?:json|JSON)\s*[\r\n]*([\s\S]*?)[\r\n]*```"
         matches = re.findall(json_block_pattern, text)
 
+        # If no complete markdown blocks found, check for incomplete ones (missing closing ```)
+        if not matches:
+            incomplete_pattern = r"```(?:json|JSON)\s*[\r\n]*([\s\S]*?)$"
+            incomplete_matches = re.findall(incomplete_pattern, text)
+            if incomplete_matches:
+                matches = incomplete_matches
+
         if matches:
-            # Return the first JSON block found
+            # If multiple JSON blocks found, return the one with the most top-level keys
+            # This helps avoid returning partial/incomplete JSON blocks
+            best_match = None
+            max_keys = 0
+
+            for match in matches:
+                try:
+                    # Clean up common JSON formatting issues
+                    cleaned_match = match.strip()
+                    # Fix issue where there might be extra space before a key
+                    cleaned_match = re.sub(r'"\s+"(\w+)":', r'"\1":', cleaned_match)
+
+                    parsed = json.loads(cleaned_match)
+                    if isinstance(parsed, dict):
+                        num_keys = len(parsed.keys())
+                        if num_keys > max_keys:
+                            max_keys = num_keys
+                            best_match = cleaned_match
+                except json.JSONDecodeError:
+                    continue
+
+            if best_match:
+                return best_match
+            # Fallback to first match if none could be parsed
             return matches[0].strip()
 
         # If no markdown block, try to find raw JSON

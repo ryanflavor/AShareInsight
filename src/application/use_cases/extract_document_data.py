@@ -370,4 +370,5 @@ class ExtractDocumentDataUseCase:
             "report_title": report_title,
             "file_path": str(file_path),
             "file_hash": document.metadata.file_hash,
+            "original_content": document.content,  # Add the original document content
         }

@@ -209,6 +209,15 @@ class BusinessConceptMasterModel(Base):
         """
         from decimal import Decimal
 
+        import numpy as np
+
+        # Convert pgvector embedding to bytes for domain entity
+        embedding_bytes = None
+        if self.embedding is not None:
+            # Convert pgvector to numpy array then to bytes
+            embedding_array = np.array(self.embedding, dtype=np.float32)
+            embedding_bytes = embedding_array.tobytes()
+
         return business_concept_master_class(
             concept_id=self.concept_id,
             company_code=self.company_code,
@@ -216,7 +225,7 @@ class BusinessConceptMasterModel(Base):
             concept_category=self.concept_category,
             importance_score=Decimal(str(self.importance_score)),
             development_stage=self.development_stage,
-            embedding=list(self.embedding) if self.embedding is not None else None,
+            embedding=embedding_bytes,
             concept_details=self.concept_details,
             last_updated_from_doc_id=self.last_updated_from_doc_id,
             version=self.version,
@@ -235,8 +244,17 @@ class BusinessConceptMasterModel(Base):
         Returns:
             BusinessConceptMasterModel instance
         """
+        import numpy as np
+
         # Check if concept_id is a zero UUID (new concept that needs DB generation)
         zero_uuid = UUID("00000000-0000-0000-0000-000000000000")
+
+        # Convert bytes embedding to list[float] for pgvector
+        embedding_list = None
+        if entity.embedding is not None:
+            # Convert bytes to numpy array then to list
+            embedding_array = np.frombuffer(entity.embedding, dtype=np.float32)
+            embedding_list = embedding_array.tolist()
 
         kwargs = {
             "company_code": entity.company_code,
@@ -244,7 +262,7 @@ class BusinessConceptMasterModel(Base):
             "concept_category": entity.concept_category,
             "importance_score": entity.importance_score,
             "development_stage": entity.development_stage,
-            "embedding": entity.embedding if entity.embedding else None,
+            "embedding": embedding_list,
             "concept_details": entity.concept_details,
             "last_updated_from_doc_id": entity.last_updated_from_doc_id,
             "version": entity.version,

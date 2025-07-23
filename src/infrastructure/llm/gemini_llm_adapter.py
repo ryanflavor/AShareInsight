@@ -87,10 +87,24 @@ class GeminiLLMAdapter(LLMServicePort):
 
             try:
                 # Get prompt template and format with document
+                # Use metadata if provided, otherwise use defaults
+                company_name = (
+                    metadata.get("company_name", self.settings.llm.default_company_name)
+                    if metadata
+                    else self.settings.llm.default_company_name
+                )
+                document_type = (
+                    metadata.get(
+                        "document_type", self.settings.llm.default_annual_report_type
+                    )
+                    if metadata
+                    else self.settings.llm.default_annual_report_type
+                )
+
                 prompt_text = self.annual_report_prompt.format(
                     document_content=document_content,
-                    company_name=self.settings.llm.default_company_name,
-                    document_type=self.settings.llm.default_annual_report_type,
+                    company_name=company_name,
+                    document_type=document_type,
                 )
 
                 # Create messages
@@ -146,9 +160,53 @@ class GeminiLLMAdapter(LLMServicePort):
                     "Parsing LLM response",
                     response_length=len(response_content),
                 )
-                company_report = self.annual_report_parser.parse_with_retry(
-                    response_content
+
+                # Save raw response to a temporary location for recovery
+                import json
+                from datetime import datetime
+                from pathlib import Path
+
+                raw_responses_dir = Path("data/raw_responses/annual_reports")
+                raw_responses_dir.mkdir(parents=True, exist_ok=True)
+
+                # Generate a meaningful filename including company name and timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                company_name_clean = company_name.replace(" ", "_").replace("/", "_")[
+                    :50
+                ]
+                raw_response_file = (
+                    raw_responses_dir
+                    / f"{company_name_clean}_{timestamp}_raw_response.json"
                 )
+
+                raw_data = {
+                    "response_content": response_content,
+                    "metadata": metadata,
+                    "timestamp": datetime.now().isoformat(),
+                    "model": self.gemini_adapter.config.model_name,
+                    "prompt_version": self.annual_report_prompt.get_version(),
+                }
+
+                with open(raw_response_file, "w", encoding="utf-8") as f:
+                    json.dump(raw_data, f, ensure_ascii=False, indent=2)
+
+                logger.info(
+                    "Saved raw LLM response",
+                    file=str(raw_response_file),
+                    size=len(response_content),
+                )
+
+                try:
+                    company_report = self.annual_report_parser.parse_with_retry(
+                        response_content
+                    )
+                except Exception as parse_error:
+                    logger.error(
+                        "Parsing failed but raw response saved",
+                        raw_response_file=str(raw_response_file),
+                        error=str(parse_error),
+                    )
+                    raise
 
                 # Record metrics
                 duration = time.time() - start_time
@@ -238,9 +296,9 @@ class GeminiLLMAdapter(LLMServicePort):
 
             try:
                 # Get prompt template and format with document
+                # Research report prompt only needs document_content
                 prompt_text = self.research_report_prompt.format(
-                    document_content=document_content,
-                    report_title=self.settings.llm.default_research_report_type,
+                    document_content=document_content
                 )
 
                 # Create messages
@@ -296,9 +354,50 @@ class GeminiLLMAdapter(LLMServicePort):
                     "Parsing LLM response",
                     response_length=len(response_content),
                 )
-                research_report = self.research_report_parser.parse_with_retry(
-                    response_content
+
+                # Save raw response to a temporary location for recovery
+                import json
+                from datetime import datetime
+                from pathlib import Path
+
+                raw_responses_dir = Path("data/raw_responses/research_reports")
+                raw_responses_dir.mkdir(parents=True, exist_ok=True)
+
+                # Generate a meaningful filename using timestamp
+                # For research reports, we don't have company name in metadata yet
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                raw_response_file = (
+                    raw_responses_dir / f"research_report_{timestamp}_raw_response.json"
                 )
+
+                raw_data = {
+                    "response_content": response_content,
+                    "metadata": metadata,
+                    "timestamp": datetime.now().isoformat(),
+                    "model": self.gemini_adapter.config.model_name,
+                    "prompt_version": self.research_report_prompt.get_version(),
+                }
+
+                with open(raw_response_file, "w", encoding="utf-8") as f:
+                    json.dump(raw_data, f, ensure_ascii=False, indent=2)
+
+                logger.info(
+                    "Saved raw LLM response",
+                    file=str(raw_response_file),
+                    size=len(response_content),
+                )
+
+                try:
+                    research_report = self.research_report_parser.parse_with_retry(
+                        response_content
+                    )
+                except Exception as parse_error:
+                    logger.error(
+                        "Parsing failed but raw response saved",
+                        raw_response_file=str(raw_response_file),
+                        error=str(parse_error),
+                    )
+                    raise
 
                 # Record metrics
                 duration = time.time() - start_time

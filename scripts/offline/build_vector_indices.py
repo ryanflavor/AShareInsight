@@ -155,7 +155,7 @@ async def build_vectors(
         Processing statistics
     """
     # Load configuration
-    load_dotenv()
+    load_dotenv(override=True)
     settings = Settings()
 
     # Initialize database connection
@@ -230,6 +230,19 @@ async def build_vectors(
 
         # Load checkpoint
         processed_ids = checkpoint_manager.load()
+
+        # First, get a count of concepts needing embeddings
+        initial_check = await repository.find_concepts_needing_embeddings(limit=1)
+        if not initial_check and not rebuild_all:
+            logger.info("all_concepts_have_embeddings")
+            return {
+                "total_concepts": 0,
+                "processed": 0,
+                "succeeded": 0,
+                "failed": 0,
+                "skipped": 0,
+                "message": "All concepts already have embeddings",
+            }
 
         # If we have processed IDs and not rebuilding all, we need custom logic
         if processed_ids and not rebuild_all:
@@ -368,17 +381,23 @@ def main(
             click.echo("\n" + "=" * 60)
             click.echo("Vector Index Build Summary")
             click.echo("=" * 60)
-            click.echo(f"Total concepts:     {result.get('total_concepts', 0)}")
-            click.echo(f"Processed:          {result.get('processed', 0)}")
-            click.echo(f"Succeeded:          {result.get('succeeded', 0)}")
-            click.echo(f"Failed:             {result.get('failed', 0)}")
-            click.echo(f"Skipped:            {result.get('skipped', 0)}")
-            click.echo(f"Processing time:    {result.get('processing_time', 0):.2f}s")
 
-            if result.get("errors"):
-                click.echo("\nErrors:")
-                for error in result["errors"]:
-                    click.echo(f"  - {error}")
+            if result.get("message"):
+                click.echo(f"Status: {result['message']}")
+            else:
+                click.echo(f"Total concepts:     {result.get('total_concepts', 0)}")
+                click.echo(f"Processed:          {result.get('processed', 0)}")
+                click.echo(f"Succeeded:          {result.get('succeeded', 0)}")
+                click.echo(f"Failed:             {result.get('failed', 0)}")
+                click.echo(f"Skipped:            {result.get('skipped', 0)}")
+                click.echo(
+                    f"Processing time:    {result.get('processing_time', 0):.2f}s"
+                )
+
+                if result.get("errors"):
+                    click.echo("\nErrors:")
+                    for error in result["errors"]:
+                        click.echo(f"  - {error}")
 
         logger.info("vector_index_build_completed", **result)
 

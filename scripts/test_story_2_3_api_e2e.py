@@ -21,7 +21,7 @@ async def test_search_with_reranking():
 
     # Test search request
     search_payload = {
-        "query_identifier": "002170",  # 芭田股份
+        "query_identifier": "300257",  # BYD company code
         "top_k": 10,
         "market_filters": {"min_market_cap": 1000},
     }

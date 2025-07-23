@@ -15,7 +15,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import os
+
 import structlog
+from pydantic import SecretStr
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
@@ -30,8 +33,6 @@ from src.infrastructure.persistence.postgres.source_document_repository import (
     PostgresSourceDocumentRepository,
 )
 from src.shared.config.settings import Settings
-from pydantic import SecretStr
-import os
 
 logger = structlog.get_logger()
 console = Console()
@@ -381,7 +382,7 @@ class SmartIncrementalExtractor:
             )
 
             # Process documents with limited concurrency
-            semaphore = asyncio.Semaphore(5)  # Max 5 concurrent
+            semaphore = asyncio.Semaphore(20)  # Max 5 concurrent
 
             async def process_with_limit(doc_info):
                 async with semaphore:
