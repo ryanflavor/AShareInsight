@@ -70,6 +70,7 @@ def create_backup():
         "--no-privileges",
         "--if-exists",
         "--create",
+        "--no-sync",  # Don't wait for sync to disk (faster)
     ]
 
     try:
@@ -119,11 +120,16 @@ if __name__ == "__main__":
     print(f"Current time: {now_china()}")
     print()
 
-    # Confirm backup
-    response = input("Do you want to create a database backup? (yes/no): ")
-    if response.lower() != "yes":
-        print("Backup cancelled.")
-        sys.exit(0)
+    # Check for --yes flag
+    if "--yes" in sys.argv:
+        print("Running in non-interactive mode (--yes flag detected)")
+        success = create_backup()
+    else:
+        # Confirm backup
+        response = input("Do you want to create a database backup? (yes/no): ")
+        if response.lower() != "yes":
+            print("Backup cancelled.")
+            sys.exit(0)
+        success = create_backup()
 
-    success = create_backup()
     sys.exit(0 if success else 1)
