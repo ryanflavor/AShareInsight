@@ -4,7 +4,6 @@ This module tests the query parsing functionality for extracting
 company information from search queries and results.
 """
 
-from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -16,6 +15,7 @@ from src.domain.services import (
     QueryCompanyParser,
 )
 from src.domain.value_objects import Document
+from src.shared.utils.timezone import now_china
 
 
 class TestQueryCompanyParser:
@@ -29,7 +29,7 @@ class TestQueryCompanyParser:
     @pytest.fixture
     def sample_documents(self) -> list[Document]:
         """Create sample documents for testing."""
-        base_time = datetime.now(UTC)
+        base_time = now_china()
 
         return [
             Document(
@@ -203,7 +203,7 @@ class TestQueryCompanyParser:
             concept_category="Finance",
             importance_score=Decimal("0.9"),
             similarity_score=0.96,
-            matched_at=datetime.now(UTC),
+            matched_at=now_china(),
         )
 
         companies = [
@@ -280,7 +280,7 @@ class TestQueryCompanyParser:
             concept_category="Test",
             importance_score=Decimal("0.9"),
             similarity_score=0.97,  # High score > 0.95
-            matched_at=datetime.now(UTC),
+            matched_at=now_china(),
         )
 
         # Act
@@ -320,7 +320,7 @@ class TestQueryCompanyParser:
             concept_category="Tech",
             importance_score=Decimal("0.9"),
             similarity_score=0.90,
-            matched_at=datetime.now(UTC),
+            matched_at=now_china(),
         )
 
         companies = sample_aggregated_companies + [

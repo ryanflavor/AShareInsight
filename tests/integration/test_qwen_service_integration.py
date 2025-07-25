@@ -1,11 +1,14 @@
 """Test integration with running Qwen Service."""
 
 import asyncio
+
+# Configure logging
 import logging
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+import structlog
 
 from src.application.ports.reranker_port import RerankRequest
 from src.domain.value_objects.document import Document
@@ -14,9 +17,8 @@ from src.infrastructure.llm.qwen.qwen_rerank_adapter import (
     QwenRerankConfig,
 )
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @pytest.mark.asyncio

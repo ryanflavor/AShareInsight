@@ -5,7 +5,6 @@ for business concepts in the master data table.
 """
 
 import time
-from datetime import datetime
 from typing import Any, cast
 
 import structlog
@@ -18,6 +17,7 @@ from src.application.ports.embedding_service_port import EmbeddingServicePort
 from src.domain.entities.business_concept_master import BusinessConceptMaster
 from src.domain.services.vectorization_service import VectorizationService
 from src.infrastructure.monitoring.vectorization_metrics import VectorizationMetrics
+from src.shared.utils.timezone import now_china
 
 logger = structlog.get_logger(__name__)
 
@@ -332,7 +332,7 @@ class BuildVectorIndexUseCase:
                 "embedding_dimension": (
                     self.embedding_service.get_embedding_dimension()
                 ),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": now_china().isoformat(),
             }
 
             if company_code:
@@ -348,5 +348,5 @@ class BuildVectorIndexUseCase:
             )
             return {
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": now_china().isoformat(),
             }

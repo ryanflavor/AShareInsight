@@ -5,11 +5,11 @@ This service contains business logic for preparing texts before vectorization,
 ensuring consistent text formatting and handling of business concepts.
 """
 
-import logging
 import re
 from typing import Any
 
 import numpy as np
+import structlog
 
 from src.application.ports.embedding_service_port import (
     EmbeddingRequest,
@@ -19,7 +19,7 @@ from src.application.ports.embedding_service_port import (
 from src.domain.entities.business_concept_master import BusinessConceptMaster
 from src.shared.config.settings import QwenEmbeddingSettings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class VectorizationService:

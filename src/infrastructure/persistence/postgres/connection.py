@@ -60,6 +60,10 @@ class DatabaseConnection:
                 pool_timeout=30,
                 pool_recycle=3600,
                 pool_pre_ping=True,  # Enable connection health checks
+                connect_args={
+                    "server_settings": {"timezone": "Asia/Shanghai"},
+                    "command_timeout": 60,
+                },
             )
             self._session_factory = async_sessionmaker(
                 self._engine,

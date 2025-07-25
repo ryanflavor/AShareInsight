@@ -4,7 +4,6 @@ This service implements the smart fusion algorithm that merges new business
 concept data with existing master data based on defined fusion rules.
 """
 
-from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -13,6 +12,7 @@ import structlog
 
 from src.domain.entities.business_concept_master import BusinessConceptMaster
 from src.domain.entities.company import BusinessConcept
+from src.shared.utils.timezone import now_china
 
 logger = structlog.get_logger(__name__)
 
@@ -111,8 +111,8 @@ class DataFusionService:
             last_updated_from_doc_id=doc_id,
             version=1,
             is_active=True,
-            created_at=datetime.now(UTC),
-            updated_at=datetime.now(UTC),
+            created_at=now_china(),
+            updated_at=now_china(),
         )
 
     def _get_updated_fields(self, new_data: dict[str, Any]) -> list[str]:

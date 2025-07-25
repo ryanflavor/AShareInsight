@@ -4,7 +4,7 @@ This module defines the BusinessConceptMaster entity which represents
 the authoritative master data for business concepts of companies.
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -12,6 +12,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, field_validator
 
 from src.shared.config.settings import get_settings
+from src.shared.utils.timezone import now_china
 
 
 class BusinessConceptMaster(BaseModel):
@@ -108,7 +109,7 @@ class BusinessConceptMaster(BaseModel):
         # Update metadata
         self.last_updated_from_doc_id = doc_id
         self.version += 1
-        self.updated_at = datetime.now(UTC)
+        self.updated_at = now_china()
 
     def _merge_relations(self, new_relations: dict[str, Any]) -> None:
         """Merge relations using union strategy."""

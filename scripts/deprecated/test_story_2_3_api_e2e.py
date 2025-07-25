@@ -7,12 +7,43 @@ import logging
 import sys
 
 import httpx
+import structlog
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+stock_codes = [
+    "001360.SZ",  # 南矿集团
+    "001239.SZ",  # 永达股份
+    "002037.SZ",  # 保利联合
+    "002096.SZ",  # 易普力
+    "002097.SZ",  # 山河智能
+    "002266.SZ",  # 浙富控股
+    "002297.SZ",  # 博云新材
+    "002827.SZ",  # 高争民爆
+    "002883.SZ",  # 中设股份
+    "003001.SZ",  # 中岩大地
+    "003002.SZ",  # 壶化股份
+    "300564.SZ",  # 筑博设计
+    "301038.SZ",  # 深水规院
+    "600117.SH",  # 西宁特钢
+    "600326.SH",  # 西藏天路
+    "600528.SH",  # 中铁工业
+    "600749.SH",  # 西藏旅游
+    "600801.SH",  # 华新水泥
+    "600875.SH",  # 东方电气
+    "601399.SH",  # 国机重装
+    "601669.SH",  # 中国电建
+    "603280.SH",  # 南方路机
+    "603616.SH",  # 韩建河山
+    "603916.SH",  # 苏博特
+    "603966.SH",  # 法兰泰克
+    "688425.SH",  # 铁建重工
+    "836942.BJ",  # 恒立钻具
+]
 
 
 async def test_search_with_reranking():
@@ -21,8 +52,9 @@ async def test_search_with_reranking():
 
     # Test search request
     search_payload = {
-        "query_identifier": "300257",  # BYD company code
-        "top_k": 10,
+        "query_identifier": "603193",  # BYD company code
+        "top_k": 100,
+        "similarity_threshold": 0.5,
         "market_filters": {"min_market_cap": 1000},
     }
 
@@ -54,8 +86,8 @@ async def test_search_with_reranking():
             logger.info(f"Found {len(companies)} similar companies")
 
             # Display top 5 results
-            logger.info("\nTop 5 results with reranking:")
-            for i, company in enumerate(companies[:5]):
+            logger.info("\nresults with reranking:")
+            for i, company in enumerate(companies):
                 logger.info(
                     f"{i + 1}. {company['company_name']} ({company['company_code']}) "
                     f"- Score: {company['relevance_score']:.3f}"
@@ -105,8 +137,9 @@ async def test_search_without_target():
     base_url = "http://localhost:8000"
 
     search_payload = {
-        "query_identifier": "002568",  # 百润股份
-        "top_k": 5,
+        "query_identifier": "防蚊虫，驱蚊",  # 开山股份
+        "top_k": 30,
+        "similarity_threshold": 0.3,
     }
 
     logger.info("\nTesting search with another company code...")
@@ -178,7 +211,7 @@ async def main():
         return 1
 
     tests = [
-        ("Search with company code and reranking", test_search_with_reranking),
+        # ("Search with company code and reranking", test_search_with_reranking),
         ("Search with another company code", test_search_without_target),
     ]
 

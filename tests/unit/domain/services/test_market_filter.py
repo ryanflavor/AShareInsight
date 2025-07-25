@@ -1,379 +1,237 @@
-"""Unit tests for MarketFilter domain service.
+"""Unit tests for market filter with advanced scoring."""
 
-This module tests the market data filtering functionality including
-filter application and graceful degradation.
-"""
-
-from datetime import UTC, datetime
 from decimal import Decimal
-from uuid import uuid4
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-import pytest_asyncio
 
-pytestmark = pytest.mark.asyncio
-
-from src.domain.services import (
-    AggregatedCompany,
+from src.domain.services.company_aggregator import AggregatedCompany
+from src.domain.services.market_filter import (
+    FilterResult,
     MarketData,
     MarketDataRepository,
     MarketFilter,
     MarketFilters,
-    StubMarketDataRepository,
 )
-from src.domain.value_objects import Document
-
-
-class MockMarketDataRepository(MarketDataRepository):
-    """Mock implementation of MarketDataRepository for testing."""
-
-    def __init__(self, market_data: dict[str, MarketData] | None = None):
-        """Initialize with optional market data."""
-        self.market_data = market_data or {}
-        self.calls = []  # Track method calls for verification
-
-    async def get_market_data(self, company_codes: list[str]) -> dict[str, MarketData]:
-        """Return configured market data."""
-        self.calls.append(company_codes)
-        return {
-            code: data
-            for code, data in self.market_data.items()
-            if code in company_codes
-        }
+from src.shared.config.market_filter_config import MarketFilterConfig, TierConfig
 
 
 class TestMarketFilter:
-    """Test cases for MarketFilter service."""
+    """Test cases for MarketFilter with advanced scoring."""
 
     @pytest.fixture
-    def sample_companies(self) -> list[AggregatedCompany]:
-        """Create sample aggregated companies for testing."""
-        base_time = datetime.now(UTC)
+    def mock_market_data_repo(self):
+        """Create mock market data repository."""
+        return AsyncMock(spec=MarketDataRepository)
 
-        # Create mock documents for each company
-        doc1 = Document(
-            concept_id=uuid4(),
-            company_code="000001",
-            company_name="Large Cap Company",
-            concept_name="Tech",
-            concept_category="Technology",
-            importance_score=Decimal("0.9"),
-            similarity_score=0.95,
-            matched_at=base_time,
+    @pytest.fixture
+    def market_filter_config(self):
+        """Create test market filter configuration."""
+        return MarketFilterConfig(
+            max_market_cap=85e8,
+            max_avg_volume_5d=2e8,
+            market_cap_tiers=[
+                TierConfig(
+                    min_value=60e8, max_value=85e8, score=1.0, label="Quality mid-cap"
+                ),
+                TierConfig(
+                    min_value=40e8, max_value=60e8, score=2.0, label="Standard mid-cap"
+                ),
+                TierConfig(min_value=0, max_value=40e8, score=3.0, label="Small-cap"),
+            ],
+            volume_tiers=[
+                TierConfig(
+                    min_value=1e8, max_value=2e8, score=1.0, label="High liquidity"
+                ),
+                TierConfig(
+                    min_value=0.5e8, max_value=1e8, score=2.0, label="Medium liquidity"
+                ),
+                TierConfig(
+                    min_value=0, max_value=0.5e8, score=3.0, label="Low liquidity"
+                ),
+            ],
+            relevance_mapping_enabled=False,
         )
 
-        doc2 = Document(
-            concept_id=uuid4(),
-            company_code="000002",
-            company_name="Mid Cap Company",
-            concept_name="Finance",
-            concept_category="Financial",
-            importance_score=Decimal("0.8"),
-            similarity_score=0.88,
-            matched_at=base_time,
-        )
+    @pytest.fixture
+    def market_filter(self, mock_market_data_repo, market_filter_config):
+        """Create market filter instance."""
+        return MarketFilter(mock_market_data_repo, market_filter_config)
 
-        doc3 = Document(
-            concept_id=uuid4(),
-            company_code="000003",
-            company_name="Small Cap Company",
-            concept_name="Retail",
-            concept_category="Consumer",
-            importance_score=Decimal("0.7"),
-            similarity_score=0.82,
-            matched_at=base_time,
-        )
+    @pytest.fixture
+    def sample_companies(self):
+        """Create sample aggregated companies."""
+        # Create mock documents for matched concepts
+        from src.domain.value_objects import Document
+
+        doc1 = MagicMock(spec=Document)
+        doc2 = MagicMock(spec=Document)
+        doc3 = MagicMock(spec=Document)
 
         return [
             AggregatedCompany(
                 company_code="000001",
-                company_name="Large Cap Company",
-                relevance_score=0.95,
-                matched_concepts=[doc1],
+                company_name="Company A",
+                company_name_short="A",
+                relevance_score=0.9,
+                matched_concepts=[doc1, doc2],
             ),
             AggregatedCompany(
                 company_code="000002",
-                company_name="Mid Cap Company",
-                relevance_score=0.88,
-                matched_concepts=[doc2],
+                company_name="Company B",
+                company_name_short="B",
+                relevance_score=0.7,
+                matched_concepts=[doc3],
             ),
             AggregatedCompany(
                 company_code="000003",
-                company_name="Small Cap Company",
-                relevance_score=0.82,
-                matched_concepts=[doc3],
+                company_name="Company C",
+                company_name_short="C",
+                relevance_score=0.5,
+                matched_concepts=[],
             ),
         ]
 
     @pytest.fixture
-    def market_data(self) -> dict[str, MarketData]:
+    def sample_market_data(self):
         """Create sample market data."""
         return {
             "000001": MarketData(
                 company_code="000001",
-                market_cap_cny=Decimal("100000000000"),  # 100B
-                avg_volume_5day=Decimal("5000000"),  # 5M
+                market_cap_cny=Decimal("70e8"),  # 70亿 - Quality mid-cap
+                avg_volume_5day=Decimal("1.5e8"),  # 1.5亿 - High liquidity
             ),
             "000002": MarketData(
                 company_code="000002",
-                market_cap_cny=Decimal("10000000000"),  # 10B
-                avg_volume_5day=Decimal("1000000"),  # 1M
+                market_cap_cny=Decimal("50e8"),  # 50亿 - Standard mid-cap
+                avg_volume_5day=Decimal("0.8e8"),  # 0.8亿 - Medium liquidity
             ),
             "000003": MarketData(
                 company_code="000003",
-                market_cap_cny=Decimal("1000000000"),  # 1B
-                avg_volume_5day=Decimal("100000"),  # 100K
+                market_cap_cny=Decimal("90e8"),  # 90亿 - Exceeds max filter
+                avg_volume_5day=Decimal("2.5e8"),  # 2.5亿 - Exceeds max filter
             ),
         }
 
-    @pytest_asyncio.fixture
-    async def market_filter_with_data(
-        self, market_data: dict[str, MarketData]
-    ) -> MarketFilter:
-        """Create MarketFilter with mock data repository."""
-        repository = MockMarketDataRepository(market_data)
-        return MarketFilter(repository)
-
-    @pytest_asyncio.fixture
-    async def market_filter_stub(self) -> MarketFilter:
-        """Create MarketFilter with stub repository."""
-        repository = StubMarketDataRepository()
-        return MarketFilter(repository)
-
-    async def test_filter_by_market_cap(
-        self,
-        market_filter_with_data: MarketFilter,
-        sample_companies: list[AggregatedCompany],
+    @pytest.mark.asyncio
+    async def test_apply_filters_with_scoring(
+        self, market_filter, mock_market_data_repo, sample_companies, sample_market_data
     ):
-        """Test filtering by maximum market cap."""
-        # Arrange
-        filters = MarketFilters(
-            max_market_cap_cny=Decimal("50000000000"),  # 50B max
-            min_5day_avg_volume=None,
-        )
+        """Test applying filters with advanced scoring algorithm."""
+        # Setup mock
+        mock_market_data_repo.get_market_data.return_value = sample_market_data
 
-        # Act
-        result = await market_filter_with_data.apply_filters(
-            companies=sample_companies, filters=filters
-        )
+        # Apply filters
+        result = await market_filter.apply_filters(sample_companies)
 
-        # Assert
-        assert len(result.filtered_companies) == 2  # Only companies 2 and 3
-        assert result.filtered_companies[0].company_code == "000002"
-        assert result.filtered_companies[1].company_code == "000003"
-        assert result.filters_applied["market_cap_filter"] is True
-        assert result.filters_applied["volume_filter"] is False
+        # Verify result
+        assert isinstance(result, FilterResult)
+        assert len(result.scored_companies) == 2  # Company C filtered out
         assert result.total_before_filter == 3
+        assert result.filters_applied["advanced_scoring"] is True
 
-    async def test_filter_by_volume(
-        self,
-        market_filter_with_data: MarketFilter,
-        sample_companies: list[AggregatedCompany],
+        # Check scoring for Company A
+        company_a = next(
+            sc for sc in result.scored_companies if sc.company.company_code == "000001"
+        )
+        assert company_a.market_cap_score == 1.0  # Quality mid-cap
+        assert company_a.volume_score == 1.0  # High liquidity
+        assert company_a.relevance_coefficient == 0.9
+        assert company_a.l_score == 0.9 * (1.0 + 1.0)  # 1.8
+
+        # Check scoring for Company B
+        company_b = next(
+            sc for sc in result.scored_companies if sc.company.company_code == "000002"
+        )
+        assert company_b.market_cap_score == 2.0  # Standard mid-cap
+        assert company_b.volume_score == 2.0  # Medium liquidity
+        assert company_b.relevance_coefficient == 0.7
+        assert company_b.l_score == 0.7 * (2.0 + 2.0)  # 2.8
+
+        # Verify sorting by L score (descending)
+        assert (
+            result.scored_companies[0].company.company_code == "000002"
+        )  # Higher L score
+        assert result.scored_companies[1].company.company_code == "000001"
+
+    @pytest.mark.asyncio
+    async def test_apply_filters_with_custom_thresholds(
+        self, market_filter, mock_market_data_repo, sample_companies, sample_market_data
     ):
-        """Test filtering by minimum volume."""
-        # Arrange
-        filters = MarketFilters(
-            max_market_cap_cny=None,
-            min_5day_avg_volume=Decimal("500000"),  # 500K minimum
+        """Test applying custom filter thresholds."""
+        mock_market_data_repo.get_market_data.return_value = sample_market_data
+
+        # Apply with custom filters
+        custom_filters = MarketFilters(
+            max_market_cap_cny=Decimal("60e8"),  # More restrictive
+            max_avg_volume_5day=Decimal("1e8"),  # More restrictive
         )
 
-        # Act
-        result = await market_filter_with_data.apply_filters(
-            companies=sample_companies, filters=filters
-        )
+        result = await market_filter.apply_filters(sample_companies, custom_filters)
 
-        # Assert
-        assert len(result.filtered_companies) == 2  # Companies 1 and 2
-        assert result.filtered_companies[0].company_code == "000001"
-        assert result.filtered_companies[1].company_code == "000002"
-        assert result.filters_applied["market_cap_filter"] is False
-        assert result.filters_applied["volume_filter"] is True
-        assert result.total_before_filter == 3
+        # Only Company B should pass (50亿 < 60亿 and 0.8亿 < 1亿)
+        assert len(result.scored_companies) == 1
+        assert result.scored_companies[0].company.company_code == "000002"
 
-    async def test_filter_by_both_criteria(
-        self,
-        market_filter_with_data: MarketFilter,
-        sample_companies: list[AggregatedCompany],
-    ):
-        """Test filtering by both market cap and volume."""
-        # Arrange
-        filters = MarketFilters(
-            max_market_cap_cny=Decimal("50000000000"),  # 50B max
-            min_5day_avg_volume=Decimal("500000"),  # 500K minimum
-        )
-
-        # Act
-        result = await market_filter_with_data.apply_filters(
-            companies=sample_companies, filters=filters
-        )
-
-        # Assert
-        assert len(result.filtered_companies) == 1  # Only company 2
-        assert result.filtered_companies[0].company_code == "000002"
-        assert result.filters_applied["market_cap_filter"] is True
-        assert result.filters_applied["volume_filter"] is True
-        assert result.total_before_filter == 3
-
-    async def test_no_filters_applied(
-        self,
-        market_filter_with_data: MarketFilter,
-        sample_companies: list[AggregatedCompany],
-    ):
-        """Test with empty filters returns all companies."""
-        # Arrange
-        filters = MarketFilters(max_market_cap_cny=None, min_5day_avg_volume=None)
-
-        # Act
-        result = await market_filter_with_data.apply_filters(
-            companies=sample_companies, filters=filters
-        )
-
-        # Assert
-        assert len(result.filtered_companies) == 3  # All companies
-        assert result.filters_applied["market_cap_filter"] is False
-        assert result.filters_applied["volume_filter"] is False
-        assert result.total_before_filter == 3
-
-    async def test_graceful_degradation_no_data(
-        self,
-        market_filter_stub: MarketFilter,
-        sample_companies: list[AggregatedCompany],
+    @pytest.mark.asyncio
+    async def test_apply_filters_no_market_data(
+        self, market_filter, mock_market_data_repo, sample_companies
     ):
         """Test graceful degradation when no market data available."""
-        # Arrange
-        filters = MarketFilters(
-            max_market_cap_cny=Decimal("50000000000"),
-            min_5day_avg_volume=Decimal("500000"),
-        )
+        mock_market_data_repo.get_market_data.return_value = {}
 
-        # Act
-        result = await market_filter_stub.apply_filters(
-            companies=sample_companies, filters=filters
-        )
+        result = await market_filter.apply_filters(sample_companies)
 
-        # Assert - all companies returned, filters not applied
-        assert len(result.filtered_companies) == 3
-        assert result.filters_applied["market_cap_filter"] is False
-        assert result.filters_applied["volume_filter"] is False
-        assert result.total_before_filter == 3
+        # Should return all companies with default scores
+        assert len(result.scored_companies) == 3
+        assert all(sc.l_score == 0.0 for sc in result.scored_companies)
+        assert result.filters_applied["advanced_scoring"] is False
 
-    async def test_missing_market_data_for_company(
-        self, sample_companies: list[AggregatedCompany]
+    @pytest.mark.asyncio
+    async def test_apply_filters_partial_market_data(
+        self, market_filter, mock_market_data_repo, sample_companies
     ):
-        """Test behavior when market data missing for specific companies."""
-        # Arrange - only data for company 1
+        """Test handling when market data is only available for some companies."""
+        # Only data for company A
         partial_data = {
             "000001": MarketData(
                 company_code="000001",
-                market_cap_cny=Decimal("100000000000"),
-                avg_volume_5day=Decimal("5000000"),
+                market_cap_cny=Decimal("70e8"),
+                avg_volume_5day=Decimal("1.5e8"),
             )
         }
-        repository = MockMarketDataRepository(partial_data)
-        market_filter = MarketFilter(repository)
+        mock_market_data_repo.get_market_data.return_value = partial_data
 
-        filters = MarketFilters(
-            max_market_cap_cny=Decimal("200000000000"),  # Should pass
-            min_5day_avg_volume=None,
-        )
+        result = await market_filter.apply_filters(sample_companies)
 
-        # Act
-        result = await market_filter.apply_filters(
-            companies=sample_companies, filters=filters
-        )
+        # Only company A should be in results
+        assert len(result.scored_companies) == 1
+        assert result.scored_companies[0].company.company_code == "000001"
 
-        # Assert - only company with data is returned
-        assert len(result.filtered_companies) == 1
-        assert result.filtered_companies[0].company_code == "000001"
-        assert result.filters_applied["market_cap_filter"] is True
+    def test_market_filter_config_tier_scoring(self, market_filter_config):
+        """Test tier-based scoring configuration."""
+        # Market cap scoring
+        assert market_filter_config.get_market_cap_score(70e8) == 1.0  # Quality mid-cap
+        assert (
+            market_filter_config.get_market_cap_score(50e8) == 2.0
+        )  # Standard mid-cap
+        assert market_filter_config.get_market_cap_score(30e8) == 3.0  # Small-cap
 
-    async def test_null_market_data_values(
-        self, sample_companies: list[AggregatedCompany]
-    ):
-        """Test handling of null values in market data."""
-        # Arrange
-        partial_data = {
-            "000001": MarketData(
-                company_code="000001",
-                market_cap_cny=None,  # Null market cap
-                avg_volume_5day=Decimal("5000000"),
-            ),
-            "000002": MarketData(
-                company_code="000002",
-                market_cap_cny=Decimal("10000000000"),
-                avg_volume_5day=None,  # Null volume
-            ),
-        }
-        repository = MockMarketDataRepository(partial_data)
-        market_filter = MarketFilter(repository)
+        # Volume scoring
+        assert market_filter_config.get_volume_score(1.5e8) == 1.0  # High liquidity
+        assert market_filter_config.get_volume_score(0.7e8) == 2.0  # Medium liquidity
+        assert market_filter_config.get_volume_score(0.3e8) == 3.0  # Low liquidity
 
-        filters = MarketFilters(
-            max_market_cap_cny=Decimal("50000000000"),
-            min_5day_avg_volume=Decimal("1000000"),
-        )
+    def test_relevance_coefficient_continuous(self, market_filter_config):
+        """Test relevance coefficient without mapping (continuous values)."""
+        assert market_filter_config.get_relevance_coefficient(0.95) == 0.95
+        assert market_filter_config.get_relevance_coefficient(0.5) == 0.5
+        assert market_filter_config.get_relevance_coefficient(0.1) == 0.1
 
-        # Act
-        result = await market_filter.apply_filters(
-            companies=sample_companies[:2],
-            filters=filters,  # Only first 2 companies
-        )
+    def test_relevance_coefficient_with_mapping(self):
+        """Test relevance coefficient with discrete mapping enabled."""
+        config = MarketFilterConfig(relevance_mapping_enabled=True)
 
-        # Assert - both excluded due to null values not meeting criteria
-        assert len(result.filtered_companies) == 0
-        assert result.filters_applied["market_cap_filter"] is True
-        assert result.filters_applied["volume_filter"] is True
-
-    async def test_empty_company_list(self, market_filter_with_data: MarketFilter):
-        """Test filtering empty company list."""
-        # Arrange
-        filters = MarketFilters(
-            max_market_cap_cny=Decimal("50000000000"),
-            min_5day_avg_volume=Decimal("500000"),
-        )
-
-        # Act
-        result = await market_filter_with_data.apply_filters(
-            companies=[], filters=filters
-        )
-
-        # Assert
-        assert len(result.filtered_companies) == 0
-        assert result.total_before_filter == 0
-
-    def test_market_filters_is_empty(self):
-        """Test MarketFilters.is_empty() method."""
-        # Test all None
-        empty_filters = MarketFilters(max_market_cap_cny=None, min_5day_avg_volume=None)
-        assert empty_filters.is_empty() is True
-
-        # Test with market cap
-        cap_filters = MarketFilters(
-            max_market_cap_cny=Decimal("1000000"), min_5day_avg_volume=None
-        )
-        assert cap_filters.is_empty() is False
-
-        # Test with volume
-        vol_filters = MarketFilters(
-            max_market_cap_cny=None, min_5day_avg_volume=Decimal("1000")
-        )
-        assert vol_filters.is_empty() is False
-
-        # Test with both
-        both_filters = MarketFilters(
-            max_market_cap_cny=Decimal("1000000"), min_5day_avg_volume=Decimal("1000")
-        )
-        assert both_filters.is_empty() is False
-
-    async def test_stub_repository_warning(
-        self, sample_companies: list[AggregatedCompany], caplog
-    ):
-        """Test that stub repository logs warning."""
-        # Arrange
-        repository = StubMarketDataRepository()
-
-        # Act
-        await repository.get_market_data(["000001", "000002"])
-
-        # Assert
-        assert "Market data requested for 2 companies" in caplog.text
-        assert "no data source is configured" in caplog.text
+        assert config.get_relevance_coefficient(0.9) == 1.0  # High relevance
+        assert config.get_relevance_coefficient(0.6) == 0.5  # Medium relevance
+        assert config.get_relevance_coefficient(0.3) == 0.1  # Low relevance

@@ -4,11 +4,13 @@ This module defines the Document value object that encapsulates
 the results from vector similarity searches.
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from src.shared.utils.timezone import now_china
 
 
 class Document(BaseModel):
@@ -21,6 +23,7 @@ class Document(BaseModel):
         concept_id: Unique identifier of the business concept
         company_code: Stock code of the company
         company_name: Full name of the company
+        company_name_short: Short name of the company
         concept_name: Name of the business concept
         concept_category: Category of the business concept
         importance_score: Importance score of the concept (0.0 to 1.0)
@@ -42,6 +45,9 @@ class Document(BaseModel):
     company_name: str = Field(
         ..., max_length=255, description="Full name of the company"
     )
+    company_name_short: str | None = Field(
+        None, max_length=100, description="Short name of the company"
+    )
     concept_name: str = Field(
         ..., max_length=255, description="Name of the business concept"
     )
@@ -58,6 +64,6 @@ class Document(BaseModel):
         None, description="ID of source concept used in search"
     )
     matched_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
+        default_factory=now_china,
         description="Timestamp when match was found",
     )

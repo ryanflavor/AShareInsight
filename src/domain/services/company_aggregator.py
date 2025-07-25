@@ -17,12 +17,14 @@ class AggregatedCompany(NamedTuple):
     Attributes:
         company_code: Stock code of the company
         company_name: Full name of the company
+        company_name_short: Short name of the company
         relevance_score: Aggregated relevance score (highest concept score)
         matched_concepts: List of matched business concepts
     """
 
     company_code: str
     company_name: str
+    company_name_short: str | None
     relevance_score: float
     matched_concepts: list[Document]
 
@@ -38,6 +40,7 @@ class CompanyConceptGroup(BaseModel):
 
     company_code: str = Field(..., max_length=10)
     company_name: str = Field(..., max_length=255)
+    company_name_short: str | None = Field(None, max_length=100)
     concepts: list[Document] = Field(default_factory=list)
 
     @property
@@ -111,6 +114,7 @@ class CompanyAggregator:
             aggregated_company = AggregatedCompany(
                 company_code=group.company_code,
                 company_name=group.company_name,
+                company_name_short=group.company_name_short,
                 relevance_score=relevance_score,
                 matched_concepts=sorted(
                     group.concepts, key=lambda doc: doc.similarity_score, reverse=True
@@ -142,6 +146,7 @@ class CompanyAggregator:
                 groups[doc.company_code] = CompanyConceptGroup(
                     company_code=doc.company_code,
                     company_name=doc.company_name,
+                    company_name_short=doc.company_name_short,
                     concepts=[doc],
                 )
             else:
@@ -150,6 +155,8 @@ class CompanyAggregator:
                 groups[doc.company_code] = CompanyConceptGroup(
                     company_code=existing_group.company_code,
                     company_name=existing_group.company_name,
+                    company_name_short=existing_group.company_name_short
+                    or doc.company_name_short,
                     concepts=existing_group.concepts + [doc],
                 )
 

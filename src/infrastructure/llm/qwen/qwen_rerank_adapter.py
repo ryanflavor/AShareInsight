@@ -9,6 +9,7 @@ import logging
 import time
 
 import httpx
+import structlog
 from pydantic import BaseModel, Field
 
 from src.application.ports.reranker_port import (
@@ -20,7 +21,7 @@ from src.application.ports.reranker_port import (
 from src.infrastructure.monitoring import track_rerank_performance
 from src.shared.exceptions import ModelInferenceError, ModelLoadError
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class QwenRerankConfig(BaseModel):
@@ -221,10 +222,10 @@ class QwenRerankAdapter(RerankerPort):
                 results = []
                 for reranked in reranked_docs:
                     # Find original document by index
-                    idx = reranked.get("original_index")
+                    idx = reranked.get("index")  # Changed from "original_index"
                     if idx is None:
                         raise ModelInferenceError(
-                            "Invalid response format: missing original_index"
+                            "Invalid response format: missing index"
                         )
                     if not (0 <= idx < len(request.documents)):
                         raise ModelInferenceError(

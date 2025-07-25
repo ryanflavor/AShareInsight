@@ -5,12 +5,11 @@ with pgvector extension for efficient vector similarity search.
 """
 
 import asyncio
-import logging
-from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
 import asyncpg
+import structlog
 from asyncpg import Pool
 
 from src.application.ports import VectorStorePort
@@ -22,8 +21,9 @@ from src.infrastructure.caching.simple_cache import (
 )
 from src.shared.config import settings
 from src.shared.exceptions import CompanyNotFoundError, DatabaseConnectionError
+from src.shared.utils.timezone import now_china
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class PostgresVectorStoreRepository(VectorStorePort):
@@ -233,11 +233,18 @@ class PostgresVectorStoreRepository(VectorStorePort):
     async def _identify_company(
         self, pool: Pool, identifier: str
     ) -> dict[str, str] | None:
-        """Identify company by code or name.
+        """Identify company by code, short name, or full name.
+
+        Search order:
+        1. Exact match on company code
+        2. Exact match on company short name (case-insensitive)
+        3. Exact match on company full name (case-insensitive)
+        4. Partial match on company short name (case-insensitive)
+        5. Partial match on company full name (case-insensitive)
 
         Args:
             pool: Database connection pool
-            identifier: Company code or name
+            identifier: Company code, short name, or full name
 
         Returns:
             Dict with company_code and company_name, or None if not found
@@ -247,7 +254,7 @@ class PostgresVectorStoreRepository(VectorStorePort):
             # Try exact match on company code first
             result = await conn.fetchrow(
                 """
-                SELECT company_code, company_name_full as company_name
+                SELECT company_code, company_name_full as company_name, company_name_short
                 FROM companies
                 WHERE company_code = $1
                 """,
@@ -257,10 +264,23 @@ class PostgresVectorStoreRepository(VectorStorePort):
             if result:
                 return dict(result)
 
-            # Try case-insensitive match on company name
+            # Try exact match on company short name
             result = await conn.fetchrow(
                 """
-                SELECT company_code, company_name_full as company_name
+                SELECT company_code, company_name_full as company_name, company_name_short
+                FROM companies
+                WHERE LOWER(company_name_short) = LOWER($1)
+                """,
+                identifier,
+            )
+
+            if result:
+                return dict(result)
+
+            # Try case-insensitive match on company full name
+            result = await conn.fetchrow(
+                """
+                SELECT company_code, company_name_full as company_name, company_name_short
                 FROM companies
                 WHERE LOWER(company_name_full) = LOWER($1)
                 """,
@@ -270,10 +290,24 @@ class PostgresVectorStoreRepository(VectorStorePort):
             if result:
                 return dict(result)
 
-            # Try partial match on company name
+            # Try partial match on company short name
             result = await conn.fetchrow(
                 """
-                SELECT company_code, company_name_full as company_name
+                SELECT company_code, company_name_full as company_name, company_name_short
+                FROM companies
+                WHERE LOWER(company_name_short) LIKE LOWER($1)
+                LIMIT 1
+                """,
+                f"%{identifier}%",
+            )
+
+            if result:
+                return dict(result)
+
+            # Try partial match on company full name
+            result = await conn.fetchrow(
+                """
+                SELECT company_code, company_name_full as company_name, company_name_short
                 FROM companies
                 WHERE LOWER(company_name_full) LIKE LOWER($1)
                 LIMIT 1
@@ -380,7 +414,8 @@ class PostgresVectorStoreRepository(VectorStorePort):
                     r.concept_category,
                     r.importance_score,
                     r.similarity_score,
-                    c.company_name_full as company_name
+                    c.company_name_full as company_name,
+                    c.company_name_short
                 FROM search_similar_concepts($1::halfvec(2560), $2, $3) r
                 JOIN companies c ON r.company_code = c.company_code
                 WHERE r.company_code != $4  -- Exclude source company
@@ -398,6 +433,7 @@ class PostgresVectorStoreRepository(VectorStorePort):
                         "concept_id": row["concept_id"],
                         "company_code": row["company_code"],
                         "company_name": row["company_name"],
+                        "company_name_short": row["company_name_short"],
                         "concept_name": row["concept_name"],
                         "concept_category": row["concept_category"],
                         "importance_score": Decimal(str(row["importance_score"])),
@@ -446,13 +482,14 @@ class PostgresVectorStoreRepository(VectorStorePort):
         # Convert to Document objects
         documents = []
 
-        now = datetime.now(UTC)
+        now = now_china()
 
         for result in best_scores.values():
             doc = Document(
                 concept_id=result["concept_id"],
                 company_code=result["company_code"],
                 company_name=result["company_name"],
+                company_name_short=result.get("company_name_short"),
                 concept_name=result["concept_name"],
                 concept_category=result["concept_category"],
                 importance_score=result["importance_score"],

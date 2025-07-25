@@ -4,7 +4,7 @@ This module implements the business logic for searching similar companies
 based on business concepts, following the hexagonal architecture pattern.
 """
 
-import logging
+import structlog
 
 from src.application.ports import RerankerPort, VectorStorePort
 from src.application.ports.reranker_port import RerankRequest
@@ -21,7 +21,7 @@ from src.domain.services import (
 from src.domain.value_objects import BusinessConceptQuery
 from src.shared.exceptions import CompanyNotFoundError, SearchServiceError
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class SearchSimilarCompaniesUseCase:
@@ -61,13 +61,13 @@ class SearchSimilarCompaniesUseCase:
         top_k: int = 50,
         similarity_threshold: float = 0.7,
         market_filters: DomainMarketFilters | None = None,
-    ) -> tuple[list[AggregatedCompany], dict[str, bool]]:
+    ) -> tuple[list[AggregatedCompany], dict[str, any]]:
         """Execute the similar companies search.
 
         Args:
             target_identifier: Company code or name to search for
             text_to_embed: Optional text for additional search context
-            top_k: Number of top results to return (1-100)
+            top_k: Number of top results to return (1-200)
             similarity_threshold: Minimum similarity score (0.0-1.0)
 
         Returns:
@@ -106,9 +106,49 @@ class SearchSimilarCompaniesUseCase:
                 try:
                     logger.info(f"Applying reranking to {len(documents)} documents")
 
+                    # Build intelligent query text if not provided
+                    query_text = text_to_embed
+                    if not query_text and documents:
+                        # Extract company name and top concepts from the source company
+                        # Find documents from the source company
+                        source_docs = [
+                            doc
+                            for doc in documents
+                            if doc.company_code == target_identifier
+                        ]
+
+                        if source_docs:
+                            # Get company name from first matching document
+                            company_name = source_docs[0].company_name
+
+                            # Get top 3 unique concepts sorted by importance
+                            unique_concepts = {}
+                            for doc in source_docs:
+                                if doc.concept_name not in unique_concepts:
+                                    unique_concepts[doc.concept_name] = (
+                                        doc.importance_score
+                                    )
+
+                            # Sort by importance and take top 3
+                            top_concepts = sorted(
+                                unique_concepts.items(),
+                                key=lambda x: x[1],
+                                reverse=True,
+                            )[:3]
+                            concept_names = [name for name, _ in top_concepts]
+
+                            # Build structured query text
+                            query_text = (
+                                f"{company_name} 主营业务:{' '.join(concept_names)}"
+                            )
+                            logger.info(f"Built query text for reranking: {query_text}")
+                        else:
+                            # Fallback to identifier if no source documents found
+                            query_text = target_identifier
+
                     # Prepare rerank request
                     rerank_request = RerankRequest(
-                        query=text_to_embed or target_identifier,
+                        query=query_text or target_identifier,
                         documents=documents,
                         top_k=top_k,
                     )
@@ -167,20 +207,31 @@ class SearchSimilarCompaniesUseCase:
             )
 
             # Apply market filters if provided
-            filters_applied = {"market_cap_filter": False, "volume_filter": False}
+            filters_applied = {
+                "market_cap_filter": False,
+                "volume_filter": False,
+                "advanced_scoring": False,
+            }
+            filter_config = {}
 
-            if self._market_filter and market_filters and not market_filters.is_empty():
-                logger.info("Applying market filters")
+            if self._market_filter:
+                logger.info("Applying market filters and scoring")
                 filter_result = await self._market_filter.apply_filters(
                     companies=aggregated_companies,
                     filters=market_filters,
                 )
-                aggregated_companies = filter_result.filtered_companies
+
+                # Extract companies from scored results
+                scored_companies = filter_result.scored_companies
+                aggregated_companies = [sc.company for sc in scored_companies]
+
+                # Update metadata
                 filters_applied = filter_result.filters_applied
+                filter_config = filter_result.filter_config
 
                 logger.info(
-                    f"Market filters reduced companies from "
-                    f"{filter_result.total_before_filter} to "
+                    f"Market filters and scoring applied: "
+                    f"{filter_result.total_before_filter} companies reduced to "
                     f"{len(aggregated_companies)}"
                 )
 
@@ -189,7 +240,14 @@ class SearchSimilarCompaniesUseCase:
                 aggregated_companies = aggregated_companies[:top_k]
                 logger.info(f"Limited results to top {top_k} companies")
 
-            return aggregated_companies, filters_applied
+            # Build comprehensive metadata
+            metadata = {
+                **filters_applied,
+                **filter_config,
+                "total_results": len(aggregated_companies),
+            }
+
+            return aggregated_companies, metadata
 
         except CompanyNotFoundError:
             # Re-raise company not found errors

@@ -100,7 +100,15 @@ class QueryCompanyParser:
                 )
 
             # Check if query matches company name (exact or substring)
-            if query_lower in company.company_name.lower():
+            company_name_lower = company.company_name.lower()
+            if query_lower in company_name_lower:
+                return ParsedQueryCompany(
+                    name=company.company_name, code=company.company_code
+                )
+
+            # Check if company name contains query (reverse check)
+            # This handles cases like "开山股份" matching "开山集团股份有限公司"
+            if any(part in query_lower for part in company_name_lower.split()):
                 return ParsedQueryCompany(
                     name=company.company_name, code=company.company_code
                 )

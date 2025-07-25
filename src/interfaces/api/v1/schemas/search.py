@@ -63,7 +63,7 @@ class SearchSimilarCompaniesRequest(BaseModel):
         20,
         description="Number of similar companies to return",
         ge=1,
-        le=100,
+        le=200,
     )
     similarity_threshold: float = Field(
         0.7,

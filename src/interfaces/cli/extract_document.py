@@ -8,7 +8,6 @@ from financial documents using LLM services.
 import logging
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 import click
@@ -29,6 +28,7 @@ from src.shared.exceptions import (
 from src.shared.exceptions import (
     ValidationError as AppValidationError,
 )
+from src.shared.utils.timezone import now_china
 
 # Configure structured logging
 structlog.configure(
@@ -125,7 +125,7 @@ def format_extraction_result(result) -> Table:
 def save_result_to_file(result, output_path: Path | None) -> Path:
     """Save extraction result to JSON file."""
     if output_path is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = now_china().strftime("%Y%m%d_%H%M%S")
         output_path = Path(f"extraction_result_{timestamp}.json")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,11 +1,11 @@
 """OpenTelemetry monitoring and observability module."""
 
-import logging
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from functools import wraps
 from typing import Any, TypeVar
 
+import structlog
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -28,7 +28,7 @@ except ImportError:
 
 from src.shared.config.settings import Settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Type variable for decorators
 F = TypeVar("F", bound=Callable[..., Any])

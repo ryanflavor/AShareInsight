@@ -5,12 +5,13 @@ failures when the database becomes unavailable.
 """
 
 import asyncio
-import logging
 import time
 from enum import Enum
 from typing import Any, TypeVar
 
-logger = logging.getLogger(__name__)
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 T = TypeVar("T")
 

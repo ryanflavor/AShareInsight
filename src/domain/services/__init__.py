@@ -14,7 +14,7 @@ from src.domain.services.market_filter import (
     MarketDataRepository,
     MarketFilter,
     MarketFilters,
-    StubMarketDataRepository,
+    ScoredCompany,
 )
 from src.domain.services.query_parser import ParsedQueryCompany, QueryCompanyParser
 from src.domain.services.similarity_calculator import (
@@ -34,7 +34,7 @@ __all__ = [
     "MarketFilters",
     "MarketData",
     "MarketDataRepository",
-    "StubMarketDataRepository",
+    "ScoredCompany",
     "FilterResult",
     "QueryCompanyParser",
     "ParsedQueryCompany",

@@ -4,12 +4,12 @@ This module provides utilities for analyzing query performance
 and ensuring indexes are properly utilized.
 """
 
-import logging
 from typing import Any
 
 import asyncpg
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def analyze_vector_search_query(

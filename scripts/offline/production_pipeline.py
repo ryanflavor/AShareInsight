@@ -16,7 +16,6 @@ import hashlib
 import json
 import shutil
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -37,10 +36,77 @@ load_dotenv(override=True)
 from sqlalchemy import select
 
 from src.infrastructure.persistence.postgres.connection import get_session
-from src.infrastructure.persistence.postgres.models import SourceDocumentModel
+from src.infrastructure.persistence.postgres.models import (
+    SourceDocumentModel,
+)
+from src.shared.utils.timezone import now_china
 
 logger = structlog.get_logger()
 console = Console()
+
+
+class FileLock:
+    """Simple file-based lock to prevent concurrent processing of same file."""
+
+    def __init__(self, lock_dir: Path = Path("data/temp/locks")):
+        self.lock_dir = lock_dir
+        self.lock_dir.mkdir(parents=True, exist_ok=True)
+        self._held_locks = set()
+
+    def _get_lock_path(self, file_path: Path) -> Path:
+        """Get lock file path for given file."""
+        # Use hash of absolute path to create lock filename
+        path_hash = hashlib.md5(str(file_path.absolute()).encode()).hexdigest()
+        return self.lock_dir / f"{path_hash}.lock"
+
+    async def acquire(self, file_path: Path, timeout: float = 30.0) -> bool:
+        """Try to acquire lock for file.
+
+        Args:
+            file_path: Path to file to lock
+            timeout: Maximum time to wait for lock (seconds)
+
+        Returns:
+            True if lock acquired, False if timeout
+        """
+        lock_path = self._get_lock_path(file_path)
+        start_time = asyncio.get_event_loop().time()
+
+        while True:
+            try:
+                # Try to create lock file exclusively
+                lock_path.touch(exist_ok=False)
+                self._held_locks.add(lock_path)
+                logger.debug(f"Acquired lock for {file_path.name}")
+                return True
+            except FileExistsError:
+                # Lock already held, check if timeout
+                if asyncio.get_event_loop().time() - start_time > timeout:
+                    logger.warning(f"Timeout acquiring lock for {file_path.name}")
+                    return False
+                # Wait a bit and retry
+                await asyncio.sleep(0.1)
+
+    def release(self, file_path: Path):
+        """Release lock for file."""
+        lock_path = self._get_lock_path(file_path)
+        if lock_path in self._held_locks:
+            try:
+                lock_path.unlink()
+                self._held_locks.remove(lock_path)
+                logger.debug(f"Released lock for {file_path.name}")
+            except FileNotFoundError:
+                # Lock already released
+                pass
+
+    def release_all(self):
+        """Release all held locks (cleanup)."""
+        for lock_path in list(self._held_locks):
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+        self._held_locks.clear()
 
 
 class DocumentState:
@@ -115,16 +181,16 @@ class DocumentState:
                 "fusion": {"status": "pending", "timestamp": None, "concepts": 0},
                 "vectorization": {"status": "pending", "timestamp": None, "vectors": 0},
             },
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
+            "created_at": now_china().isoformat(),
+            "updated_at": now_china().isoformat(),
         }
 
     def update_stage(self, stage: str, status: str, **kwargs):
         """Update stage status and save checkpoint."""
         self.state["stages"][stage]["status"] = status
-        self.state["stages"][stage]["timestamp"] = datetime.now().isoformat()
+        self.state["stages"][stage]["timestamp"] = now_china().isoformat()
         self.state["stages"][stage].update(kwargs)
-        self.state["updated_at"] = datetime.now().isoformat()
+        self.state["updated_at"] = now_china().isoformat()
         self._save_checkpoint()
 
     def _save_checkpoint(self):
@@ -138,8 +204,92 @@ class DocumentState:
             stage["status"] == "success" for stage in self.state["stages"].values()
         )
 
-    def needs_reprocessing(self, db_record: Any | None) -> bool:
+    def needs_reprocessing(
+        self,
+        db_record: Any | None,
+        existing_companies: set | None = None,
+        extract_company_code_func=None,
+    ) -> bool:
         """Check if document needs reprocessing."""
+        # FIRST AND MOST IMPORTANT: Check if extracted JSON already exists
+        # This prevents expensive LLM calls
+        path_str = str(self.file_path)
+        if "annual_reports" in path_str or "annual_report" in path_str:
+            doc_type = "annual_report"
+        elif "research_reports" in path_str or "research_report" in path_str:
+            doc_type = "research_report"
+        else:
+            # Default based on file name patterns
+            if (
+                "年度报告" in self.file_path.name
+                or "annual" in self.file_path.name.lower()
+            ):
+                doc_type = "annual_report"
+            else:
+                doc_type = "research_report"
+
+        output_path = Path(
+            f"data/extracted/{doc_type}s/{self.file_path.stem}_extracted.json"
+        )
+        if output_path.exists():
+            logger.info(
+                f"Extracted JSON already exists for {self.file_path.name}, skipping ALL processing to save money"
+            )
+            # Mark all stages as complete in checkpoint to avoid confusion
+            self.state["stages"]["extraction"]["status"] = "success"
+            self.state["stages"]["archive"]["status"] = "success"
+            self.state["stages"]["fusion"]["status"] = "success"
+            self.state["stages"]["vectorization"]["status"] = "success"
+            self._save_checkpoint()
+            return False
+
+        # NEW: For annual reports, check if company already exists
+        # This avoids adding files from existing companies to the processing queue
+        if (
+            doc_type == "annual_report"
+            and existing_companies
+            and extract_company_code_func
+        ):
+            # Use the provided function to extract company code
+            company_code = extract_company_code_func(self.file_path)
+
+            if company_code and company_code in existing_companies:
+                logger.info(
+                    f"Company {company_code} already exists in database, skipping {self.file_path.name} to save LLM costs"
+                )
+                # Create minimal extracted JSON to mark as processed
+                import json
+
+                output_dir = Path(f"data/extracted/{doc_type}s")
+                output_dir.mkdir(parents=True, exist_ok=True)
+
+                minimal_data = {
+                    "document_type": doc_type,
+                    "extraction_data": {
+                        "company_code": company_code,
+                        "company_name_full": f"Company {company_code}",
+                        "company_name_short": f"Company {company_code}",
+                    },
+                    "extraction_metadata": {
+                        "extraction_method": "existing_company_skip_early",
+                        "llm_skipped": True,
+                        "timestamp": now_china().isoformat(),
+                        "file_path": str(self.file_path),
+                    },
+                }
+
+                # Save minimal extraction JSON
+                with open(output_path, "w", encoding="utf-8") as f:
+                    json.dump(minimal_data, f, ensure_ascii=False, indent=2)
+
+                # Mark all stages as complete
+                self.state["stages"]["extraction"]["status"] = "success"
+                self.state["stages"]["archive"]["status"] = "success"
+                self.state["stages"]["fusion"]["status"] = "success"
+                self.state["stages"]["vectorization"]["status"] = "success"
+                self._save_checkpoint()
+                return False
+
         if not db_record:
             return True
 
@@ -168,16 +318,129 @@ class ProductionPipeline:
 
     def __init__(self, max_concurrent: int = 5):
         self.max_concurrent = max_concurrent
+        self.file_lock = FileLock()
         self.stats = {
             "total_files": 0,
             "processed": 0,
             "skipped": 0,
             "failed": 0,
             "reprocessed": 0,
+            "locked_skip": 0,
+            "llm_skipped": 0,
             "db_cleared": False,
             "checkpoints_cleared": False,
             "indices_created": False,
         }
+        self.existing_companies = set()  # Cache for existing companies
+
+    async def fetch_existing_companies(self):
+        """Fetch all existing company codes from database."""
+        try:
+            # Import CompanyModel here to avoid linter issues
+            from src.infrastructure.persistence.postgres.models import CompanyModel
+
+            async with get_session() as session:
+                stmt = select(CompanyModel.company_code)
+                result = await session.execute(stmt)
+                self.existing_companies = set(result.scalars().all())
+                logger.info(
+                    f"Found {len(self.existing_companies)} existing companies in database"
+                )
+        except Exception as e:
+            logger.error(f"Failed to fetch existing companies: {e}")
+            self.existing_companies = set()
+
+    def extract_company_code_from_file(self, file_path: Path) -> str | None:
+        """Extract company code from file name or content preview."""
+        import re
+
+        # Try to extract from filename first
+        # Common patterns: 300257_xxx, 300257东方网力, etc.
+        filename_pattern = r"(\d{6})(?:_|[^\d])"
+        match = re.search(filename_pattern, file_path.stem)
+        if match:
+            return match.group(1)
+
+        # If no code in filename, try reading first few lines of file
+        try:
+            with open(file_path, encoding="utf-8") as f:
+                # Read first 2000 characters for better coverage
+                content = f.read(2000)
+
+                # Pattern 1: Look for patterns like "股票代码：300257" or "证券代码：300257"
+                # Support both Chinese and English colons, with optional spaces and asterisks
+                code_pattern = r"(?:股票代码|证券代码|代码)\s*[：:]\s*\**(\d{6})\**"
+                match = re.search(code_pattern, content)
+                if match:
+                    return match.group(1)
+
+                # Pattern 2: Look for 6-digit codes in table format (e.g., |002259|)
+                table_pattern = r"\|\s*(\d{6})\s*\|"
+                match = re.search(table_pattern, content)
+                if match:
+                    return match.group(1)
+
+                # Pattern 3: Look for 6-digit codes with brackets
+                bracket_pattern = r"[（(](\d{6})[）)]"
+                match = re.search(bracket_pattern, content)
+                if match:
+                    return match.group(1)
+
+                # Pattern 4: Simple 6-digit pattern at start of lines
+                simple_pattern = r"^(\d{6})\b"
+                match = re.search(simple_pattern, content, re.MULTILINE)
+                if match:
+                    return match.group(1)
+
+                # Pattern 5: Look for "A股代码" or similar patterns
+                a_share_pattern = r"A股代码\s*[：:]\s*(\d{6})"
+                match = re.search(a_share_pattern, content)
+                if match:
+                    return match.group(1)
+
+                # Pattern 6: Handle dual-listed companies (A+B or A+H)
+                # Look for patterns like "000028、200028" or "000063/00763"
+                dual_listing_pattern = r"(\d{6})[、/](?:\d{6}|\d{5})"
+                match = re.search(dual_listing_pattern, content)
+                if match:
+                    return match.group(1)  # Return A-share code
+
+                # Pattern 7: Handle space-separated codes like "3 0 0 4 9 4"
+                space_code_pattern = r"(\d)\s+(\d)\s+(\d)\s+(\d)\s+(\d)\s+(\d)"
+                match = re.search(space_code_pattern, content)
+                if match:
+                    return "".join(match.groups())
+
+                # Pattern 8: Look for SZ/SH format codes
+                sz_sh_pattern = r"(?:SZ|SH|sz|sh)\s*[.:]?\s*(\d{6})"
+                match = re.search(sz_sh_pattern, content)
+                if match:
+                    return match.group(1)
+
+                # Pattern 9: Look in specific table cell patterns
+                # Handle cases like "300683<br>股票上市"
+                cell_pattern = r">(\d{6})<"
+                match = re.search(cell_pattern, content)
+                if match:
+                    return match.group(1)
+
+                # Pattern 10: Handle codes in various table/report formats
+                # Like "股票简称 | 蓝宇股份 | 股票代码<br>301585"
+                table_code_pattern = r"股票代码[^0-9]{0,20}(\d{6})"
+                match = re.search(table_code_pattern, content)
+                if match:
+                    return match.group(1)
+
+                # Pattern 11: More flexible pattern for any 6 digits that appear after key words
+                flexible_pattern = r"(?:股票|证券|代码|简称)[^0-9]{0,50}(\d{6})"
+                match = re.search(flexible_pattern, content)
+                if match:
+                    return match.group(1)
+
+        except Exception as e:
+            logger.debug(f"Could not read file {file_path.name} for company code: {e}")
+
+        return None
 
     async def check_document_state(
         self, file_path: Path
@@ -187,9 +450,9 @@ class ProductionPipeline:
         temp_state = DocumentState(file_path)
 
         async with get_session() as session:
-            # Check by file path first
+            # Check by file path first - this is the primary check
             stmt = select(SourceDocumentModel).where(
-                SourceDocumentModel.file_path == str(file_path)
+                SourceDocumentModel.file_path == str(file_path.absolute())
             )
             result = await session.execute(stmt)
             db_record = result.scalars().first()
@@ -209,6 +472,35 @@ class ProductionPipeline:
     async def process_document(self, file_path: Path, doc_state: DocumentState) -> bool:
         """Process document through all pipeline stages."""
         try:
+            # Double-check if extracted file already exists before processing
+            # This handles race conditions in concurrent processing
+            path_str = str(file_path)
+            if "annual_reports" in path_str or "annual_report" in path_str:
+                doc_type = "annual_report"
+            elif "research_reports" in path_str or "research_report" in path_str:
+                doc_type = "research_report"
+            else:
+                # Default based on file name patterns
+                if "年度报告" in file_path.name or "annual" in file_path.name.lower():
+                    doc_type = "annual_report"
+                else:
+                    doc_type = "research_report"
+
+            output_path = Path(
+                f"data/extracted/{doc_type}s/{file_path.stem}_extracted.json"
+            )
+            if output_path.exists():
+                logger.info(
+                    f"Extracted file already exists (race condition), skipping: {file_path.name}"
+                )
+                # Update state to reflect completion
+                doc_state.state["stages"]["extraction"]["status"] = "success"
+                doc_state.state["stages"]["archive"]["status"] = "success"
+                doc_state.state["stages"]["fusion"]["status"] = "success"
+                doc_state.state["stages"]["vectorization"]["status"] = "success"
+                doc_state._save_checkpoint()
+                return True
+
             # Stage 1: Extraction
             if doc_state.state["stages"]["extraction"]["status"] != "success":
                 await self.extract_document(file_path, doc_state)
@@ -269,6 +561,47 @@ class ProductionPipeline:
                 )
                 return
 
+            # Check if company already exists in database (for annual reports)
+            if doc_type == "annual_report":
+                company_code = self.extract_company_code_from_file(file_path)
+                if company_code and company_code in self.existing_companies:
+                    # Company already exists, create minimal extraction JSON without LLM
+                    logger.info(
+                        f"Company {company_code} already exists in database, creating minimal extraction JSON for {file_path.name}"
+                    )
+
+                    # Create minimal extraction data with just company code
+                    minimal_data = {
+                        "document_type": doc_type,
+                        "extraction_data": {
+                            "company_code": company_code,
+                            # Add other minimal fields that might be required
+                            "company_name_full": f"Company {company_code}",  # Placeholder, will be updated from DB
+                            "company_name_short": f"Company {company_code}",  # Placeholder
+                        },
+                        "extraction_metadata": {
+                            "extraction_method": "existing_company_skip",
+                            "llm_skipped": True,
+                            "timestamp": now_china().isoformat(),
+                            "file_path": str(file_path),
+                        },
+                    }
+
+                    # Save minimal extraction JSON
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    with open(output_path, "w", encoding="utf-8") as f:
+                        json.dump(minimal_data, f, ensure_ascii=False, indent=2)
+
+                    doc_state.update_stage(
+                        "extraction",
+                        "success",
+                        output_path=str(output_path),
+                        skipped_llm=True,
+                        existing_company=company_code,
+                    )
+                    self.stats["llm_skipped"] += 1
+                    return
+
             # No existing extraction, proceed with LLM
             from src.application.use_cases.extract_document_data import (
                 ExtractDocumentDataUseCase,
@@ -316,6 +649,19 @@ class ProductionPipeline:
     async def archive_document(self, file_path: Path, doc_state: DocumentState):
         """Archive document to database."""
         try:
+            # Recalculate file hash to ensure it's current
+            # This handles cases where file was modified after being queued
+            current_file_hash = doc_state._calculate_hash()
+            if current_file_hash != doc_state.file_hash:
+                logger.warning(
+                    f"File {file_path.name} was modified after being queued. "
+                    f"Original hash: {doc_state.file_hash[:16]}..., "
+                    f"Current hash: {current_file_hash[:16]}..."
+                )
+                # Update the DocumentState with current hash
+                doc_state.file_hash = current_file_hash
+                doc_state.state["file_hash"] = current_file_hash
+
             # Get extraction result - same logic as extract_document
             path_str = str(file_path)
             if "annual_reports" in path_str or "annual_report" in path_str:
@@ -337,6 +683,7 @@ class ProductionPipeline:
 
             # Check if document already exists in database
             async with get_session() as session:
+                # First check by file_hash (exact same content)
                 stmt = (
                     select(SourceDocumentModel.doc_id)
                     .where(SourceDocumentModel.file_hash == doc_state.file_hash)
@@ -348,10 +695,38 @@ class ProductionPipeline:
                 doc_id = result.scalar()
 
                 if doc_id:
-                    # Document already in database
+                    # Document already in database with same hash
                     doc_state.update_stage("archive", "success", doc_id=str(doc_id))
                     logger.info(
                         f"Document already archived: {file_path.name} -> {doc_id}"
+                    )
+                    return
+
+                # Check if file_path already exists (file was updated)
+                stmt = (
+                    select(SourceDocumentModel.doc_id, SourceDocumentModel.file_hash)
+                    .where(SourceDocumentModel.file_path == str(file_path))
+                    .order_by(SourceDocumentModel.created_at.desc())
+                    .limit(1)
+                )
+
+                result = await session.execute(stmt)
+                row = result.first()
+
+                if row:
+                    # File path exists but with different hash - file was updated
+                    existing_doc_id, existing_hash = row
+                    logger.warning(
+                        f"File path already exists with different hash: {file_path.name}\n"
+                        f"  Existing hash: {existing_hash[:16]}...\n"
+                        f"  New hash: {doc_state.file_hash[:16]}...\n"
+                        f"  Skipping re-archive to avoid duplicate file_path"
+                    )
+                    doc_state.update_stage(
+                        "archive",
+                        "skipped",
+                        reason="file_path_exists_with_different_hash",
+                        existing_doc_id=str(existing_doc_id),
                     )
                     return
 
@@ -400,7 +775,7 @@ class ProductionPipeline:
                     "company_name_full", file_path.name
                 ),
                 "file_path": str(file_path),
-                "file_hash": doc_state.file_hash,
+                "file_hash": doc_state.file_hash,  # Always use file content hash from DocumentState
                 "original_content": original_content,
             }
 
@@ -630,6 +1005,16 @@ class ProductionPipeline:
             self.stats["checkpoints_cleared"] = True
             console.print("[green]✅ Checkpoint directory created[/green]")
 
+        # Also clear lock files
+        lock_dir = Path("data/temp/locks")
+        if lock_dir.exists():
+            try:
+                shutil.rmtree(lock_dir)
+                lock_dir.mkdir(parents=True, exist_ok=True)
+                console.print("[green]✅ Lock files cleared[/green]")
+            except Exception as e:
+                logger.warning(f"Failed to clear lock files: {e}")
+
     async def create_vector_indices(self):
         """Create HNSW vector indices for production."""
         console.print("\n[bold blue]🔨 Creating vector indices...[/bold blue]")
@@ -664,6 +1049,9 @@ class ProductionPipeline:
     ):
         """Run the production pipeline with optional database clearing."""
 
+        # Fetch existing companies from database
+        await self.fetch_existing_companies()
+
         # Collect all documents
         all_files = []
         for base_dir, doc_type in [
@@ -682,7 +1070,9 @@ class ProductionPipeline:
         for file_path in all_files:
             db_record, doc_state = await self.check_document_state(file_path)
 
-            if force_reprocess or doc_state.needs_reprocessing(db_record):
+            if force_reprocess or doc_state.needs_reprocessing(
+                db_record, self.existing_companies, self.extract_company_code_from_file
+            ):
                 to_process.append((file_path, doc_state, db_record is not None))
             else:
                 self.stats["skipped"] += 1
@@ -692,12 +1082,82 @@ class ProductionPipeline:
 
         if dry_run:
             console.print("\n[yellow]Dry run - no processing performed[/yellow]")
+
+            # Count already extracted files
+            already_extracted_count = 0
+            for base_dir, doc_type in [
+                (annual_reports_dir, "annual_report"),
+                (research_reports_dir, "research_report"),
+            ]:
+                if base_dir.exists():
+                    for pattern in ["**/*.md", "**/*.txt"]:
+                        for file_path in base_dir.glob(pattern):
+                            output_path = Path(
+                                f"data/extracted/{doc_type}s/{file_path.stem}_extracted.json"
+                            )
+                            if output_path.exists():
+                                already_extracted_count += 1
+
+            console.print("\n[bold]Overall Statistics:[/bold]")
+            console.print(f"  - Total files found: {self.stats['total_files']}")
+            console.print(
+                f"  - Already extracted (JSON exists): {already_extracted_count}"
+            )
+            console.print(f"  - Truly need processing: {len(to_process)}")
+            console.print(
+                f"  - Will skip (already extracted): {self.stats['total_files'] - len(to_process)}"
+            )
+
+            # Analyze which files would skip LLM extraction
+            skip_llm_count = 0
+            need_llm_count = 0
+            company_unknown_count = 0
+
+            console.print("\n[bold]Analysis of LLM extraction requirements:[/bold]")
+
+            for file_path, doc_state, is_reprocess in to_process:
+                # Try to extract company code
+                company_code = self.extract_company_code_from_file(file_path)
+
+                if company_code and company_code in self.existing_companies:
+                    skip_llm_count += 1
+                elif company_code:
+                    need_llm_count += 1
+                else:
+                    company_unknown_count += 1
+
+            console.print(
+                f"  - Files from existing companies (skip LLM): {skip_llm_count}"
+            )
+            console.print(f"  - Files from new companies (need LLM): {need_llm_count}")
+            console.print(
+                f"  - Files with unknown company code: {company_unknown_count}"
+            )
+
             # Show sample files
-            for file_path, doc_state, is_reprocess in to_process[:5]:
+            console.print("\n[bold]Sample files to process:[/bold]")
+            sample_count = 0
+            for file_path, doc_state, is_reprocess in to_process:
+                if sample_count >= 10:
+                    break
+
+                company_code = self.extract_company_code_from_file(file_path)
                 status = "reprocess" if is_reprocess else "new"
-                console.print(f"  - {file_path.name} ({status})")
-            if len(to_process) > 5:
-                console.print(f"  ... and {len(to_process) - 5} more")
+
+                if company_code and company_code in self.existing_companies:
+                    llm_status = "[green]skip LLM[/green]"
+                elif company_code:
+                    llm_status = "[red]need LLM[/red]"
+                else:
+                    llm_status = "[yellow]unknown[/yellow]"
+
+                console.print(
+                    f"  - {file_path.name} ({status}, {company_code or 'no code'}, {llm_status})"
+                )
+                sample_count += 1
+
+            if len(to_process) > 10:
+                console.print(f"  ... and {len(to_process) - 10} more")
             return
 
         # Process documents with parallel extraction
@@ -710,17 +1170,29 @@ class ProductionPipeline:
 
         async def process_with_semaphore(file_path, doc_state, is_reprocess):
             async with semaphore:
-                if is_reprocess:
-                    self.stats["reprocessed"] += 1
+                # Try to acquire file lock
+                if not await self.file_lock.acquire(file_path):
+                    logger.warning(
+                        f"Could not acquire lock for {file_path.name}, skipping"
+                    )
+                    self.stats["locked_skip"] += 1
+                    return False
 
-                success = await self.process_document(file_path, doc_state)
+                try:
+                    if is_reprocess:
+                        self.stats["reprocessed"] += 1
 
-                if success:
-                    self.stats["processed"] += 1
-                else:
-                    self.stats["failed"] += 1
+                    success = await self.process_document(file_path, doc_state)
 
-                return success
+                    if success:
+                        self.stats["processed"] += 1
+                    else:
+                        self.stats["failed"] += 1
+
+                    return success
+                finally:
+                    # Always release lock
+                    self.file_lock.release(file_path)
 
         # Create tasks for all documents
         tasks = [
@@ -750,6 +1222,9 @@ class ProductionPipeline:
         if build_indices and not dry_run:
             await self.create_vector_indices()
 
+        # Clean up any remaining locks
+        self.file_lock.release_all()
+
     def _display_results(self):
         """Display processing results."""
         console.print("\n[bold]=== PIPELINE RESULTS ===[/bold]")
@@ -767,6 +1242,8 @@ class ProductionPipeline:
         table.add_row("Processed", str(self.stats["processed"]))
         table.add_row("Reprocessed", str(self.stats["reprocessed"]))
         table.add_row("Skipped", str(self.stats["skipped"]))
+        table.add_row("LLM Skipped", str(self.stats["llm_skipped"]))
+        table.add_row("Lock Skipped", str(self.stats["locked_skip"]))
         table.add_row("Failed", str(self.stats["failed"]))
 
         if self.stats["indices_created"]:

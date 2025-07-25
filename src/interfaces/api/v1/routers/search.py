@@ -5,9 +5,9 @@ This module implements the search functionality following contract-driven
 development principles with strict input/output validation.
 """
 
-import logging
 from decimal import Decimal
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.application.use_cases import SearchSimilarCompaniesUseCase
@@ -30,7 +30,7 @@ from src.interfaces.api.v1.schemas.search import (
 )
 from src.shared.exceptions import CompanyNotFoundError, SearchServiceError
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
@@ -40,6 +40,7 @@ def _convert_aggregated_to_response(
     include_justification: bool,
     filters_applied: dict,
     total_before_limit: int,
+    query_company_info: dict[str, str] | None = None,
 ) -> SearchSimilarCompaniesResponse:
     """Convert aggregated companies to API response format.
 
@@ -60,9 +61,35 @@ def _convert_aggregated_to_response(
         aggregated_companies=aggregated_companies,
     )
 
+    # Handle case where code is not a valid stock code
+    # If parsed_query.code is None or doesn't match the pattern, use query_company_info
+    query_code = parsed_query.code
+    query_name = parsed_query.name
+
+    # If we have query company info from the database, use it
+    if query_company_info:
+        query_name = (
+            query_company_info.get("company_name_short")
+            or query_company_info["company_name"]
+        )
+        query_code = query_company_info["company_code"]
+    elif not query_code or not query_code.isdigit() or len(query_code) != 6:
+        # Try to get code from first result if available
+        if aggregated_companies:
+            query_code = aggregated_companies[0].company_code
+            # Also update the name to the actual company name
+            query_name = (
+                aggregated_companies[0].company_name_short
+                or aggregated_companies[0].company_name
+            )
+        else:
+            # Use a placeholder code if no results
+            query_code = "000000"
+            query_name = parsed_query.name
+
     query_company = QueryCompany(
-        name=parsed_query.name,
-        code=parsed_query.code or query_identifier[:6],  # Fallback to first 6 chars
+        name=query_name,
+        code=query_code,
     )
 
     # Convert to CompanyResult objects
@@ -80,7 +107,7 @@ def _convert_aggregated_to_response(
         ]
 
         company_result = CompanyResult(
-            company_name=company.company_name,
+            company_name=company.company_name_short or company.company_name,
             company_code=company.company_code,
             relevance_score=company.relevance_score,
             matched_concepts=matched_concepts,
@@ -159,7 +186,7 @@ async def search_similar_companies(
                     if request.market_filters.max_market_cap_cny
                     else None
                 ),
-                min_5day_avg_volume=(
+                max_avg_volume_5day=(
                     Decimal(str(request.market_filters.min_5day_avg_volume))
                     if request.market_filters.min_5day_avg_volume
                     else None
@@ -176,6 +203,24 @@ async def search_similar_companies(
             market_filters=domain_market_filters,
         )
 
+        # If no results found, try to determine query company info
+        if not aggregated_companies:
+            # For no results, we still need to return a valid response
+            # Use the query identifier as the company name
+            query_company = QueryCompany(
+                name=request.query_identifier,
+                code="000000",  # Placeholder code
+            )
+
+            return SearchSimilarCompaniesResponse(
+                query_company=query_company,
+                metadata=SearchMetadata(
+                    total_results_before_limit=0,
+                    filters_applied={},
+                ),
+                results=[],
+            )
+
         # Merge filter information
         filters_applied = {
             "similarity_threshold": request.similarity_threshold != 0.7,
@@ -185,9 +230,35 @@ async def search_similar_companies(
             "volume_filter": filters_applied_by_service.get("volume_filter", False),
         }
 
+        # Include all metadata from the service
+        filters_applied.update(
+            {
+                k: v
+                for k, v in filters_applied_by_service.items()
+                if k not in filters_applied
+            }
+        )
+
         # For now, we use the length of results as total_before_limit
         # In future, the use case should return this information
         total_before_limit = len(aggregated_companies)
+
+        # Get query company info from vector store if available
+        # This ensures we have accurate company information
+        query_company_info = None
+        try:
+            from src.infrastructure.persistence.postgres import (
+                PostgresVectorStoreRepository,
+            )
+
+            vector_store = PostgresVectorStoreRepository()
+            pool = await vector_store._ensure_pool()
+            query_company_info = await vector_store._identify_company(
+                pool, request.query_identifier
+            )
+            await vector_store.close()
+        except Exception as e:
+            logger.warning(f"Failed to get query company info: {e}")
 
         # Convert aggregated companies to response format
         response = _convert_aggregated_to_response(
@@ -196,6 +267,7 @@ async def search_similar_companies(
             include_justification=include_justification,
             filters_applied=filters_applied,
             total_before_limit=total_before_limit,
+            query_company_info=query_company_info,
         )
 
         logger.info(

@@ -4,7 +4,6 @@ import asyncio
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +18,7 @@ from src.domain.entities.extraction import ExtractionResult
 from src.infrastructure.document_processing.loader import DocumentLoader
 from src.infrastructure.monitoring import LLMMetrics, trace_span
 from src.shared.config.settings import Settings
+from src.shared.utils.timezone import now_china
 
 logger = structlog.get_logger(__name__)
 
@@ -317,7 +317,7 @@ class BatchExtractDocumentsUseCase:
         checkpoint_data = {
             "processed_files": list(self.processed_files),
             "failed_files": self.failed_files,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now_china().isoformat(),
         }
 
         with open(self.checkpoint_file, "w") as f:

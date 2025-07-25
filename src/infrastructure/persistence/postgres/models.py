@@ -25,6 +25,8 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
+from src.shared.utils.timezone import to_china_tz
+
 Base: Any = declarative_base()
 
 
@@ -110,7 +112,7 @@ class SourceDocumentModel(Base):
             original_content=self.original_content,
             processing_status=self.processing_status,
             error_message=self.error_message,
-            created_at=self.created_at,
+            created_at=to_china_tz(self.created_at),
         )
 
     @classmethod
@@ -230,8 +232,8 @@ class BusinessConceptMasterModel(Base):
             last_updated_from_doc_id=self.last_updated_from_doc_id,
             version=self.version,
             is_active=self.is_active,
-            created_at=self.created_at,
-            updated_at=self.updated_at,
+            created_at=to_china_tz(self.created_at),
+            updated_at=to_china_tz(self.updated_at),
         )
 
     @classmethod

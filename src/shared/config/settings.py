@@ -87,7 +87,10 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        """Construct database URL from components."""
+        """Construct database URL from components.
+
+        Note: This returns a sync URL. For async operations, use postgres_dsn instead.
+        """
         return (
             f"postgresql://{self.postgres_user}:{self.postgres_password.get_secret_value()}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
@@ -106,6 +109,11 @@ class DatabaseSettings(BaseSettings):
     def postgres_dsn_sync(self) -> str:
         """Get synchronous PostgreSQL connection string."""
         return self.database_url
+
+    @property
+    def async_database_url(self) -> str:
+        """Get async database URL. Alias for postgres_dsn for clarity."""
+        return self.postgres_dsn
 
 
 class MonitoringSettings(BaseSettings):
@@ -157,7 +165,7 @@ class APISettings(BaseSettings):
 
     # Search settings
     default_similarity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
-    default_top_k: int = Field(default=50, ge=1, le=100)
+    default_top_k: int = Field(default=50, ge=1, le=200)
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="allow"
@@ -168,7 +176,7 @@ class RerankerSettings(BaseSettings):
     """Reranker service settings."""
 
     # Reranker settings
-    reranker_enabled: bool = Field(default=True)
+    reranker_enabled: bool = Field(default=False)
     reranker_service_url: str = Field(default="http://localhost:9547")
     reranker_timeout_seconds: float = Field(default=5.0, ge=0.1, le=30.0)
     reranker_max_retries: int = Field(default=2, ge=0, le=5)

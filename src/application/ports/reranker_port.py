@@ -30,7 +30,7 @@ class RerankRequest(BaseModel):
         ..., min_length=0, max_length=1000, description="List of documents to rerank"
     )
     top_k: int | None = Field(
-        None, ge=1, le=100, description="Return only top K results after reranking"
+        None, ge=1, le=200, description="Return only top K results after reranking"
     )
 
 

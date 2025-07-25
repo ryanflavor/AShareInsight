@@ -22,6 +22,7 @@ from src.infrastructure.llm.langchain.prompts import (
 from src.infrastructure.monitoring import LLMMetrics, add_span_attributes, trace_span
 from src.shared.config.settings import Settings
 from src.shared.exceptions import LLMServiceError, ValidationError
+from src.shared.utils.timezone import now_china
 
 logger = structlog.get_logger(__name__)
 
@@ -163,14 +164,13 @@ class GeminiLLMAdapter(LLMServicePort):
 
                 # Save raw response to a temporary location for recovery
                 import json
-                from datetime import datetime
                 from pathlib import Path
 
                 raw_responses_dir = Path("data/raw_responses/annual_reports")
                 raw_responses_dir.mkdir(parents=True, exist_ok=True)
 
                 # Generate a meaningful filename including company name and timestamp
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                timestamp = now_china().strftime("%Y%m%d_%H%M%S")
                 company_name_clean = company_name.replace(" ", "_").replace("/", "_")[
                     :50
                 ]
@@ -182,7 +182,7 @@ class GeminiLLMAdapter(LLMServicePort):
                 raw_data = {
                     "response_content": response_content,
                     "metadata": metadata,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": now_china().isoformat(),
                     "model": self.gemini_adapter.config.model_name,
                     "prompt_version": self.annual_report_prompt.get_version(),
                 }
@@ -357,7 +357,6 @@ class GeminiLLMAdapter(LLMServicePort):
 
                 # Save raw response to a temporary location for recovery
                 import json
-                from datetime import datetime
                 from pathlib import Path
 
                 raw_responses_dir = Path("data/raw_responses/research_reports")
@@ -365,7 +364,7 @@ class GeminiLLMAdapter(LLMServicePort):
 
                 # Generate a meaningful filename using timestamp
                 # For research reports, we don't have company name in metadata yet
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                timestamp = now_china().strftime("%Y%m%d_%H%M%S")
                 raw_response_file = (
                     raw_responses_dir / f"research_report_{timestamp}_raw_response.json"
                 )
@@ -373,7 +372,7 @@ class GeminiLLMAdapter(LLMServicePort):
                 raw_data = {
                     "response_content": response_content,
                     "metadata": metadata,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": now_china().isoformat(),
                     "model": self.gemini_adapter.config.model_name,
                     "prompt_version": self.research_report_prompt.get_version(),
                 }

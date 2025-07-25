@@ -6,6 +6,8 @@ import logging
 import sys
 from pathlib import Path
 
+import structlog
+
 # Add project root to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -21,7 +23,7 @@ from src.shared.config.settings import Settings
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def test_reranker_health_check():

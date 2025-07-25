@@ -6,6 +6,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import structlog
 from pydantic import BaseModel
 
 from src.application.ports.llm_service import LLMServicePort
@@ -21,6 +22,8 @@ from src.domain.entities import (
 )
 from src.infrastructure.document_processing import DocumentLoader, ProcessedDocument
 from src.shared.exceptions import DocumentProcessingError, LLMServiceError
+
+logger = structlog.get_logger(__name__)
 
 
 class ProcessingStatus(str, Enum):
@@ -148,9 +151,6 @@ class ExtractDocumentDataUseCase:
                         raw_llm_output=raw_llm_output,
                         metadata=archive_metadata,
                     )
-                    import structlog
-
-                    logger = structlog.get_logger(__name__)
 
                     # Check if it was skipped (indicated by the warning log)
                     if "skipping_research_report_no_company" in str(archive_result):
@@ -165,9 +165,6 @@ class ExtractDocumentDataUseCase:
                         )
                 except Exception as e:
                     # Log error but don't fail the extraction
-                    import structlog
-
-                    logger = structlog.get_logger(__name__)
                     logger.error(
                         "archiving_failed",
                         error=str(e),

@@ -129,3 +129,8 @@ uv.lock
 
 reserved/
 data/
+sample/
+
+# Market data sync status
+scripts/.market_data_sync_status.json
+

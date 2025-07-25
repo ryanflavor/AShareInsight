@@ -4,15 +4,17 @@ This module provides utilities for tracking query performance,
 search metrics, and system health indicators.
 """
 
-import logging
 import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from datetime import datetime
 from functools import wraps
 from typing import Any
 
-logger = logging.getLogger(__name__)
+import structlog
+
+from src.shared.utils.timezone import now_china
+
+logger = structlog.get_logger(__name__)
 
 
 class PerformanceMetrics:
@@ -154,10 +156,8 @@ class PerformanceMetrics:
                 "average_docs_per_request": self.get_average_docs_per_rerank(),
             },
             "uptime_seconds": self.get_uptime_seconds(),
-            # Use UTC timezone for compatibility
-            "timestamp": datetime.now(
-                getattr(datetime, "UTC", None) or __import__("datetime").timezone.utc
-            ).isoformat(),
+            # Use China timezone
+            "timestamp": now_china().isoformat(),
         }
 
 

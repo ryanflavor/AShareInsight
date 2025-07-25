@@ -87,9 +87,13 @@ class ArchiveExtractionResultUseCase:
             else:
                 doc_metadata = metadata
 
-            # Calculate file hash if not provided
+            # File hash MUST be provided from the file content
+            # Do NOT calculate hash from LLM output to avoid inconsistencies
             if not doc_metadata.file_hash:
-                doc_metadata.file_hash = self._calculate_hash(raw_llm_output)
+                raise ValueError(
+                    "file_hash must be provided in metadata. "
+                    "Hash should be calculated from file content, not LLM output."
+                )
 
             # Check if document already exists
             if await self.repository.exists(doc_metadata.file_hash):

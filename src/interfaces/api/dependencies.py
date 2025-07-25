@@ -4,29 +4,30 @@ This module provides dependency functions that can be injected
 into FastAPI route handlers.
 """
 
-import logging
 from collections.abc import AsyncGenerator
 
+import structlog
 from fastapi import Depends
 
 from src.application.ports import RerankerPort
 from src.application.use_cases import SearchSimilarCompaniesUseCase
-from src.domain.services import MarketDataRepository, StubMarketDataRepository
+from src.domain.services import MarketDataRepository
 from src.infrastructure.llm.qwen import QwenRerankAdapter, QwenRerankConfig
 from src.infrastructure.persistence.postgres import PostgresVectorStoreRepository
 from src.shared.config import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Global repository instance (will be initialized once)
 _vector_store_repository: PostgresVectorStoreRepository | None = None
 _reranker: RerankerPort | None = None
 _market_data_repository: MarketDataRepository | None = None
+_market_data_db_pool = None  # Connection pool for market data repository
 
 
-async def get_vector_store_repository() -> (
-    AsyncGenerator[PostgresVectorStoreRepository]
-):
+async def get_vector_store_repository() -> AsyncGenerator[
+    PostgresVectorStoreRepository
+]:
     """Get the vector store repository instance.
 
     This dependency provides a singleton repository instance that
@@ -96,17 +97,35 @@ async def get_reranker() -> AsyncGenerator[RerankerPort | None]:
 async def get_market_data_repository() -> AsyncGenerator[MarketDataRepository]:
     """Get the market data repository instance.
 
-    Currently returns a stub implementation. This will be replaced
-    with a real implementation when market data source is available.
-
     Yields:
         MarketDataRepository instance
     """
-    global _market_data_repository
+    global _market_data_repository, _market_data_db_pool
 
     if _market_data_repository is None:
-        _market_data_repository = StubMarketDataRepository()
-        logger.info("Initialized stub market data repository")
+        import asyncpg
+
+        from src.infrastructure.persistence.postgres.market_data_repository import (
+            MarketDataRepository as PostgresMarketDataRepo,
+        )
+        from src.infrastructure.persistence.postgres.market_data_repository_adapter import (
+            PostgresMarketDataRepositoryAdapter,
+        )
+        from src.shared.config import settings
+
+        # Create database connection pool
+        _market_data_db_pool = await asyncpg.create_pool(
+            settings.database.postgres_dsn_sync,
+            min_size=settings.database.db_pool_min_size,
+            max_size=settings.database.db_pool_max_size,
+            timeout=settings.database.db_pool_timeout,
+            command_timeout=60,
+        )
+
+        # Create the PostgreSQL repository with the pool and wrap it with the adapter
+        postgres_repo = PostgresMarketDataRepo(_market_data_db_pool)
+        _market_data_repository = PostgresMarketDataRepositoryAdapter(postgres_repo)
+        logger.info("Initialized PostgreSQL market data repository")
 
     yield _market_data_repository
 
@@ -139,7 +158,11 @@ async def get_search_similar_companies_use_case(
 
 async def shutdown_dependencies():
     """Cleanup function to close connections on shutdown."""
-    global _vector_store_repository, _reranker, _market_data_repository
+    global \
+        _vector_store_repository, \
+        _reranker, \
+        _market_data_repository, \
+        _market_data_db_pool
 
     if _vector_store_repository:
         await _vector_store_repository.close()
@@ -155,3 +178,9 @@ async def shutdown_dependencies():
             logger.info("Closed reranker connections")
         except Exception as e:
             logger.error(f"Error closing reranker: {e}")
+
+    if _market_data_db_pool:
+        await _market_data_db_pool.close()
+        _market_data_db_pool = None
+        _market_data_repository = None
+        logger.info("Closed market data repository connections")

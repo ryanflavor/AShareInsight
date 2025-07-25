@@ -29,7 +29,7 @@ class BusinessConceptQuery(BaseModel):
         None, max_length=2000, description="Optional text to embed for semantic search"
     )
     top_k: int = Field(
-        default=50, ge=1, le=100, description="Number of top results to return"
+        default=50, ge=1, le=200, description="Number of top results to return"
     )
     similarity_threshold: float = Field(
         default=0.7, ge=0.0, le=1.0, description="Minimum similarity score (0.0 to 1.0)"
